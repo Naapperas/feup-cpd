@@ -1,0 +1,7 @@
+### C++ ###
+main 
+
+### Java ###
+.idea/
+out/
+*.iml
