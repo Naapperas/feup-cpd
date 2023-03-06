@@ -112,17 +112,13 @@ public class Main {
             mx_size = scanner.nextInt();
 
             switch (op) {
-                case 1:
-                    onMult(mx_size);
-                    break;
-                case 2:
-                    onMultLine(mx_size);
-                    break;
-                case 3:
+                case 1 -> onMult(mx_size);
+                case 2 -> onMultLine(mx_size);
+                case 3 -> {
                     System.out.print("Block Size? ");
                     blockSize = scanner.nextInt();
                     onMultBlock(mx_size, blockSize);
-                    break;
+                }
             }
 
         } while (true);
