@@ -1,27 +1,15 @@
-\documentclass[11pt,a4paper]{report}
+\documentclass[11pt,a4paper]{article}
 
-\usepackage{bookmark}
-
+\usepackage[margin=.75in]{geometry}
 \usepackage{indentfirst}
 \usepackage{listings}
 \usepackage{color}
+\usepackage{hyperref}
 \usepackage[super]{nth}
 \usepackage{siunitx}
-\usepackage[mieic]{feupteses}                  % work version
-
-\usepackage{mwe}
-\usepackage[export]{adjustbox}
-\usepackage{enumitem}
-\usepackage{array,multicol,multirow,siunitx,tabularx}
-\usepackage{gensymb,textcomp}
-% \usepackage{codespace}
-\usepackage{booktabs}
-
-
+\usepackage{graphicx}
 \graphicspath{ {./resources/} }
 \usepackage{float}
-
-% \input{preamble.tex}
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
@@ -50,96 +38,107 @@
     }
 }
 
-\lstnewenvironment{code-c}
-{
-    \lstset{
-        language=c,
-        aboveskip=3mm,
-        belowskip=3mm,
-        showstringspaces=false,
-        basicstyle={\small\ttfamily},
-        keywordstyle=\color{blue},
-        commentstyle=\color{dkgreen},
-        stringstyle=\color{mauve},
-        typestyle=\color{orange},
-        breaklines=true,
-        breakatwhitespace=true,
-        moretypes={
-            LLConnection, LLConnectionParams, LLRole, Frame, ByteVector,
-            uint8_t, size_t, ssize_t, bool, termios, timer_t
-        }
-    }
+\lstset{
+    language=java,
+    aboveskip=3mm,
+    belowskip=3mm,
+    showstringspaces=false,
+    basicstyle={\small\ttfamily},
+    keywordstyle=\color{blue},
+    commentstyle=\color{dkgreen},
+    stringstyle=\color{mauve},
+    typestyle=\color{orange},
+    breaklines=true,
+    breakatwhitespace=true,
 }
-{}
-
-\lstnewenvironment{code-bash}
-{
-    \lstset{
-        language=bash,
-        aboveskip=3mm,
-        belowskip=3mm,
-        showstringspaces=false,
-        basicstyle={\small\ttfamily},
-        keywordstyle=\color{blue},
-        commentstyle=\color{dkgreen},
-        stringstyle=\color{mauve},
-        typestyle=\color{orange},
-        breaklines=true,
-        breakatwhitespace=true,
-        moretypes={ root\# }
-    }
-}
-{}
-
-\begin{document}
 
 \title{Parallel and Distributed Computing -- \nth{1} Project Report}
 \author{Guilherme Almeida, João Malva, Nuno Pereira}
 
-%% Uncomment next line for date of submission
-%\thesisdate{July 31, 2008}
+\begin{document}
 
-%%Uncomment next line for copyright text if used
-%\copyrightnotice{Name of the Author, 2008}
+\maketitle
 
+\section{Introduction}
 
-\logo{uporto-feup.pdf}
+The goal of this project was to develop a series of algorithms that perform matrix multiplication and analyze their performance using various techniques, namely:
 
-%%----------------------------------------
-%% Preliminary materials
-%%----------------------------------------
+\begin{itemize}
+    \item Normal Matrix Multiplication
+    \item "Line by Line" Matrix Multiplication
+    \item Block Matrix Multiplication
+\end{itemize}
 
-% remove unnecssary \include{} commands
-\begin{Prolog}
-  \pdfbookmark[0]{Table of Contents}{contents}
-  \tableofcontents
-  \cleardoublepage
-  \include{abbrevs}  % the list of abbreviations used
-\end{Prolog}
+\section{Algorithm Analysis}
 
+\subsection{Normal Matrix Multiplication}
 
-%%----------------------------------------
-%% Body
-%%----------------------------------------
-\StartBody
+This algorithm is the \begin{em}naïve\end{em} implementation of the normal matrix multiplication procedure.
 
-\include{body} 
+It iterates through each line of the first matrix and each column of the second matrix to perform the dot product between each vector, accumulating the results in the destination matrix.
 
-%%----------------------------------------
-%% Final materials
-%%----------------------------------------
+The algorithm can be (grossly) coded as the following:
+\begin{lstlisting}
+    for (i = 0; i < mx_size; ++i)
+        for (j = 0; j < mx_size; ++j)
+            for (k = 0; k < mx_size; ++k)
+                phc[i * mx_size + j] += pha[i * mx_size + k] * phb[k * mx_size + j];
+\end{lstlisting}
+where \lstinline{mx_size} is the side length of each matrix \lstinline{pha}, \lstinline{phb} and \lstinline{phc}.
 
-%% Bibliography
-%% Comment the next command if BibTeX file not used
-%% bibliography is in ``myrefs.bib''
-\nocite{*}
-\PrintBib{myrefs}
+\subsection{"Line by Line" Matrix Multiplication}
 
-%% Index
-%% Uncomment next command if index is required
-%% don't forget to run ``makeindex thesis'' command
-%\PrintIndex
+This algorithm is an improvement over the normal matrix multiplication algorithm.
+
+It exploits the properties of cache locality to speed up the matrix product computations.
+
+The algorithm can be (grossly) coded as the following:
+\begin{lstlisting}
+    for (i = 0; i < mx_size; ++i)
+        for (k = 0; k < mx_size; ++k)
+            for (j = 0; j < mx_size; ++j)
+                phc[i * mx_size + j] += pha[i * mx_size + k] * phb[k * mx_size + j];
+\end{lstlisting}
+where \lstinline{mx_size} is the side length of each matrix \lstinline{pha}, \lstinline{phb} and \lstinline{phc}.
+
+The main difference between this algorithm and the previous one is that, by changing the order of iteration of \lstinline{j} and \lstinline{k}, the processor does not need to load a new set of data into cache due to the multiplication order following the second matrix's lines, thus reducing drastically the number of cache misses resulting from the \begin{em}naïve\end{em} implementation.
+
+\subsection{Block Matrix Multiplication}
+
+This reasoning behind this algorithm is to "divide and conquer": by dividing the original matrix into many sub-matrices and performing the multiplication on these, the process is sped up.
+
+The algorithm used with each sub-matrix is the "Line by Line" one since it offers better performance over the \begin{em}naïve\end{em} implementation.
+
+Since the code for this algorithm is pretty big, it is not included in the report.
+
+This algorithm also has another input parameter: the block size. This value controls the size of the resulting sub-matrices, which affects the performance of the algorithm, as can be seen in the following section.
+
+\section{Performance Analysis}
+
+The performance metrics collected to analyze the developed algorithms were:
+
+\begin{itemize}
+    \item The execution time
+    \item The Level 1 Data Cache misses
+    \item The Level 2 Data Cache misses
+\end{itemize}
+
+These metrics give us an overview of the behavior of the algorithms and allow us to derive another important metric: Gflops/s. This value indicates how many floating point operations were performed per second: (typically) the higher the value the more operations were performed and the faster the algorithm was.
+
+\subsection{Data graphics}
+
+The following graphics
+
+\section{Conclusions}
+
+All of the project's goals were achieved -
+
+\onecolumn
+\appendix
+\section{Appendix}
+
+\subsection{Code}
+
+\noindent Versions of the algorithms in C and Java are available in folder \lstinline{src/}.
 
 \end{document}
-
-
