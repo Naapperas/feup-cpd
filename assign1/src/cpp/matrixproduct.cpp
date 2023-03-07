@@ -236,6 +236,8 @@ void runStats(int &EventSet, int &ret, long long values[]) {
 		printf("PAPI_L1_TCM: %lld \n",values[4]);
   		printf("PAPI_L2_TCM: %lld \n",values[5]); 
   		printf("PAPI_TOT_INS: %lld \n\n",values[6]);
+        printf("PAPI_L1_DCH: %lld \n\n",values[7]);
+        printf("PAPI_L2_DCH: %lld \n\n",values[8]);
 		printf("----\n");
 
 		ret = PAPI_reset( EventSet );
@@ -285,6 +287,8 @@ void runStats(int &EventSet, int &ret, long long values[]) {
 		printf("PAPI_L1_TCM: %lld \n",values[4]);
   		printf("PAPI_L2_TCM: %lld \n",values[5]); 
   		printf("PAPI_TOT_INS: %lld \n\n",values[6]);
+        printf("PAPI_L1_DCH: %lld \n\n",values[7]);
+        printf("PAPI_L2_DCH: %lld \n\n",values[8]);
 		printf("----\n");
 
 		ret = PAPI_reset( EventSet );
@@ -311,6 +315,8 @@ void runStats(int &EventSet, int &ret, long long values[]) {
 			printf("PAPI_L1_TCM: %lld \n",values[4]);
 			printf("PAPI_L2_TCM: %lld \n",values[5]); 
 			printf("PAPI_TOT_INS: %lld \n\n",values[6]);
+			printf("PAPI_L1_DCH: %lld \n\n",values[7]);
+			printf("PAPI_L2_DCH: %lld \n\n",values[8]);
 			printf("----\n");
 			ret = PAPI_reset( EventSet );
 			if ( ret != PAPI_OK )
