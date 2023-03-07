@@ -1,0 +1,145 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage{bookmark}
+
+\usepackage{indentfirst}
+\usepackage{listings}
+\usepackage{color}
+\usepackage[super]{nth}
+\usepackage{siunitx}
+\usepackage[mieic]{feupteses}                  % work version
+
+\usepackage{mwe}
+\usepackage[export]{adjustbox}
+\usepackage{enumitem}
+\usepackage{array,multicol,multirow,siunitx,tabularx}
+\usepackage{gensymb,textcomp}
+% \usepackage{codespace}
+\usepackage{booktabs}
+
+
+\graphicspath{ {./resources/} }
+\usepackage{float}
+
+% \input{preamble.tex}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{orange}{rgb}{.7,.3,0}
+
+\makeatletter
+\lst@InstallKeywords k{types}{typestyle}\slshape{typestyle}{}ld
+\makeatother
+
+\lstset{
+    language=c,
+    aboveskip=3mm,
+    belowskip=3mm,
+    showstringspaces=false,
+    basicstyle={\small\ttfamily},
+    keywordstyle=\color{blue},
+    commentstyle=\color{dkgreen},
+    stringstyle=\color{mauve},
+    typestyle=\color{orange},
+    breaklines=true,
+    breakatwhitespace=true,
+    moretypes={
+        LLConnection, LLConnectionParams, LLRole, Frame, ByteVector,
+        uint8_t, size_t, ssize_t, bool, termios, timer_t
+    }
+}
+
+\lstnewenvironment{code-c}
+{
+    \lstset{
+        language=c,
+        aboveskip=3mm,
+        belowskip=3mm,
+        showstringspaces=false,
+        basicstyle={\small\ttfamily},
+        keywordstyle=\color{blue},
+        commentstyle=\color{dkgreen},
+        stringstyle=\color{mauve},
+        typestyle=\color{orange},
+        breaklines=true,
+        breakatwhitespace=true,
+        moretypes={
+            LLConnection, LLConnectionParams, LLRole, Frame, ByteVector,
+            uint8_t, size_t, ssize_t, bool, termios, timer_t
+        }
+    }
+}
+{}
+
+\lstnewenvironment{code-bash}
+{
+    \lstset{
+        language=bash,
+        aboveskip=3mm,
+        belowskip=3mm,
+        showstringspaces=false,
+        basicstyle={\small\ttfamily},
+        keywordstyle=\color{blue},
+        commentstyle=\color{dkgreen},
+        stringstyle=\color{mauve},
+        typestyle=\color{orange},
+        breaklines=true,
+        breakatwhitespace=true,
+        moretypes={ root\# }
+    }
+}
+{}
+
+\begin{document}
+
+\title{Parallel and Distributed Computing -- \nth{1} Project Report}
+\author{Guilherme Almeida, João Malva, Nuno Pereira}
+
+%% Uncomment next line for date of submission
+%\thesisdate{July 31, 2008}
+
+%%Uncomment next line for copyright text if used
+%\copyrightnotice{Name of the Author, 2008}
+
+
+\logo{uporto-feup.pdf}
+
+%%----------------------------------------
+%% Preliminary materials
+%%----------------------------------------
+
+% remove unnecssary \include{} commands
+\begin{Prolog}
+  \pdfbookmark[0]{Table of Contents}{contents}
+  \tableofcontents
+  \cleardoublepage
+  \include{abbrevs}  % the list of abbreviations used
+\end{Prolog}
+
+
+%%----------------------------------------
+%% Body
+%%----------------------------------------
+\StartBody
+
+\include{body} 
+
+%%----------------------------------------
+%% Final materials
+%%----------------------------------------
+
+%% Bibliography
+%% Comment the next command if BibTeX file not used
+%% bibliography is in ``myrefs.bib''
+\nocite{*}
+\PrintBib{myrefs}
+
+%% Index
+%% Uncomment next command if index is required
+%% don't forget to run ``makeindex thesis'' command
+%\PrintIndex
+
+\end{document}
+
+
