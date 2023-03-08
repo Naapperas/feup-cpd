@@ -3,6 +3,8 @@
 \usepackage[margin=.75in]{geometry}
 \usepackage{indentfirst}
 \usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \usepackage{color}
 \usepackage{hyperref}
 \usepackage[super]{nth}
@@ -11,6 +13,7 @@
 \graphicspath{ {./resources/} }
 \usepackage{float}
 \usepackage{pgfplots}
+\usepackage{subcaption}
 \pgfplotsset{compat=1.18,table/search path={resources}}
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
@@ -69,6 +72,11 @@ The goal of this project was to develop a series of algorithms that perform matr
 
 \section{Algorithm Analysis}
 
+The algorithms described were implemented using the C programming language, the Java programming language and the Performance API, PAPI for short.
+
+PAPI is used in conjunction with the C code because it allows us to directly collect several metrics related to the performance of the algorithms developed.
+It is not used with the Java code since it runs on the Java Virtual Machine, and therefore the performance registers are virtualized, which inhibits us from 
+
 \subsection{Normal Matrix Multiplication}
 
 This algorithm is the \begin{em}naïve\end{em} implementation of the normal matrix multiplication procedure.
@@ -76,13 +84,24 @@ This algorithm is the \begin{em}naïve\end{em} implementation of the normal matr
 It iterates through each line of the first matrix and each column of the second matrix to perform the dot product between each vector, accumulating the results in the destination matrix.
 
 The algorithm can be (grossly) coded as the following:
-\begin{lstlisting}
-    for (i = 0; i < mx_size; ++i)
-        for (j = 0; j < mx_size; ++j)
-            for (k = 0; k < mx_size; ++k)
-                phc[i * mx_size + j] += pha[i * mx_size + k] * phb[k * mx_size + j];
-\end{lstlisting}
-where \lstinline{mx_size} is the side length of each matrix \lstinline{pha}, \lstinline{phb} and \lstinline{phc}.
+
+\begin{algorithm}
+    \caption{Naïve Matrix Multiplication Algorithm}
+    \begin{algorithmic}[1]
+        \Function{OnMult}{$a, b$}
+            \State {$mx\_size \gets Lenght(a)$}\Comment{$a$ should have the same side length as $b$}
+            \State {$c \gets matrix[mx\_size][mx\_size]$}\Comment{$c$ is initialized with $0$s}
+            \For{$i \gets 0$ to $mx\_size$}
+                \For{$j \gets 0$ to $mx\_size$}
+                    \For{$k \gets 0$ to $mx\_size$}
+                    \State {$c_{i,j} \gets c_{i,j} + a_{i,k} * b_{k,j}$}
+                    \EndFor
+                \EndFor
+            \EndFor
+            \State \Return $c$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
 
 \subsection{"Line by Line" Matrix Multiplication}
 
@@ -91,13 +110,23 @@ This algorithm is an improvement over the normal matrix multiplication algorithm
 It exploits the properties of cache locality to speed up the matrix product computations.
 
 The algorithm can be (grossly) coded as the following:
-\begin{lstlisting}
-    for (i = 0; i < mx_size; ++i)
-        for (k = 0; k < mx_size; ++k)
-            for (j = 0; j < mx_size; ++j)
-                phc[i * mx_size + j] += pha[i * mx_size + k] * phb[k * mx_size + j];
-\end{lstlisting}
-where \lstinline{mx_size} is the side length of each matrix \lstinline{pha}, \lstinline{phb} and \lstinline{phc}.
+\begin{algorithm}
+    \caption{Line Matrix Multiplication Algorithm}
+    \begin{algorithmic}[1]
+        \Function{OnMultLine}{$a, b$}
+            \State {$mx\_size \gets Lenght(a)$}\Comment{$a$ should have the same side length as $b$}
+            \State {$c \gets matrix[mx\_size][mx\_size]$}\Comment{$c$ is initialized with $0$s}
+            \For{$i \gets 0$ to $mx\_size$}
+                \For{$k \gets 0$ to $mx\_size$}
+                    \For{$j \gets 0$ to $mx\_size$}
+                        \State {$c_{i,j} \gets c_{i,j} + a_{i,k} * b_{k,j}$}
+                    \EndFor
+                \EndFor
+            \EndFor
+            \State \Return $c$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
 
 The main difference between this algorithm and the previous one is that, by changing the order of iteration of \lstinline{j} and \lstinline{k}, the processor does not need to load a new set of data into cache due to the multiplication order following the second matrix's lines, thus reducing drastically the number of cache misses resulting from the \begin{em}naïve\end{em} implementation.
 
@@ -110,6 +139,8 @@ The algorithm used with each sub-matrix is the "Line by Line" one since it offer
 Since the code for this algorithm is pretty big, it is not included in the report.
 
 This algorithm also has another input parameter: the block size. This value controls the size of the resulting sub-matrices, which affects the performance of the algorithm, as can be seen in the following section.
+
+\pagebreak
 
 \section{Performance Analysis}
 
@@ -125,35 +156,74 @@ These metrics give us an overview of the behavior of the algorithms and allow us
 
 \subsection{Data graphics}
 
-The following graphics
+The following graphics depict the differences between the two languages used across the various metrics measured:
 
-\begin{tikzpicture}
-    \begin{axis}[
-            xlabel={Size},
-            ylabel={GFlop/s},
-            legend style={at={(0.5,-0.2)},anchor=north},
-            xtick=data,
-        ]
-        \addplot[
-            smooth,
-            mark=*,
-            red
-        ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-GFlops.csv};
-        \label{C Naïve}
-        \addplot[
-            smooth,
-            mark=x,
-            blue
-        ] table [x=Matrix Size, y=Java_N, col sep=comma]{CPD-CSV-GFlops.csv};
-        \label{Java Naïve}
-    \end{axis}
-\end{tikzpicture}
+\subsubsection{GFlop/\unit{\second}}
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+                title={Naïve Implementation},
+                xlabel={Size},
+                ylabel={GFlop/\unit{\second}},
+                legend pos=north east,
+                xtick=data,
+                width=16cm,
+                height=10cm,
+            ]
+            \addplot[
+                smooth,
+                mark=o,
+                red
+            ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-GFlops.csv};
+            \addlegendentry{C}
+            \addplot[
+                smooth,
+                mark=x,
+                blue
+            ] table [x=Matrix Size, y=Java_N, col sep=comma]{CPD-CSV-GFlops.csv};
+            \addlegendentry{Java}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{GFlop/\unit{\second} for both implementations of the naïve algorithm}
+    \label{fig:ngf}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+                title={"Line by Line" Implementation},
+                xlabel={Size},
+                ylabel={GFlop/\unit{\second}},
+                legend pos=north east,
+                xtick=data,
+                width=16cm,
+                height=10cm,
+            ]
+            \addplot[
+                smooth,
+                mark=o,
+                red
+            ] table [x=Matrix Size, y=C_L, col sep=comma]{CPD-CSV-GFlops.csv};
+            \addlegendentry{C}
+            \addplot[
+                smooth,
+                mark=x,
+                blue
+            ] table [x=Matrix Size, y=Java_L, col sep=comma]{CPD-CSV-GFlops.csv};
+            \addlegendentry{Java}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{GFlop/\unit{\second} for both implementations of the "line by line" algorithm}    
+    \label{fig:lblgf}
+\end{figure}
 
 \section{Conclusions}
 
 All of the project's goals were achieved -
 
-\onecolumn
 \appendix
 \section{Appendix}
 
