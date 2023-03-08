@@ -10,6 +10,8 @@
 \usepackage{graphicx}
 \graphicspath{ {./resources/} }
 \usepackage{float}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18,table/search path={resources}}
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
@@ -31,11 +33,7 @@
     stringstyle=\color{mauve},
     typestyle=\color{orange},
     breaklines=true,
-    breakatwhitespace=true,
-    moretypes={
-        LLConnection, LLConnectionParams, LLRole, Frame, ByteVector,
-        uint8_t, size_t, ssize_t, bool, termios, timer_t
-    }
+    breakatwhitespace=true
 }
 
 \lstset{
@@ -49,7 +47,7 @@
     stringstyle=\color{mauve},
     typestyle=\color{orange},
     breaklines=true,
-    breakatwhitespace=true,
+    breakatwhitespace=true
 }
 
 \title{Parallel and Distributed Computing -- \nth{1} Project Report}
@@ -128,6 +126,28 @@ These metrics give us an overview of the behavior of the algorithms and allow us
 \subsection{Data graphics}
 
 The following graphics
+
+\begin{tikzpicture}
+    \begin{axis}[
+            xlabel={Size},
+            ylabel={GFlop/s},
+            legend style={at={(0.5,-0.2)},anchor=north},
+            xtick=data,
+        ]
+        \addplot[
+            smooth,
+            mark=*,
+            red
+        ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-GFlops.csv};
+        \label{C Naïve}
+        \addplot[
+            smooth,
+            mark=x,
+            blue
+        ] table [x=Matrix Size, y=Java_N, col sep=comma]{CPD-CSV-GFlops.csv};
+        \label{Java Naïve}
+    \end{axis}
+\end{tikzpicture}
 
 \section{Conclusions}
 
