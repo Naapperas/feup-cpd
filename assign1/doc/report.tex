@@ -14,7 +14,12 @@
 \usepackage{float}
 \usepackage{pgfplots}
 \usepackage{subcaption}
+\usepackage{textcomp}
 \pgfplotsset{compat=1.18,table/search path={resources}}
+
+\usepackage[T1]{fontenc}
+\usepackage{imakeidx}
+\makeindex[columns=3, title=Alphabetical Index, intoc]
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
@@ -53,39 +58,54 @@
     breakatwhitespace=true
 }
 
+
+
 \title{Parallel and Distributed Computing -- \nth{1} Project Report}
 \author{Guilherme Almeida, João Malva, Nuno Pereira}
+
+\makeindex
 
 \begin{document}
 
 \maketitle
+\pagebreak
+
+\tableofcontents
+\pagebreak
 
 \section{Introduction}
 
-The goal of this project was to develop a series of algorithms that perform matrix multiplication and analyze their performance using various techniques, namely:
+Since matrices represent equation systems, they can encode a solution a lot simpler than performing the calculations one by one. Matrix multiplications build on top of this in that they can represent multiple systems interacting. Due to this fact, the matrix multiplication algorithms used by developers should be fast enough as to not introduce a bottleneck on programs that make use of them, such as graphics simulations or artificial intelligence algorithms.
 
+With this in mind, the proposal of this project is to develop and analyze 3 variants of the matrix multiplication algorithm, with the purpose of measuring their performance against each other and draw valuable conclusions.
+
+The algorithms explored are:
 \begin{itemize}
     \item Normal Matrix Multiplication;
     \item "Line by Line" Matrix Multiplication;
     \item Block Matrix Multiplication;
 \end{itemize}
 
+\section{Setup}
+
+All the code was tested and ran on a Aorus Gigabyte computer hosting EndeavorOS, with version 6.2.2 of the Linux kernel. The CPU used was a Intel\textregistered Core\texttrademark i7-10750H CPU @ 2.60GHz. The 
+
 \section{Algorithm Analysis}
 
 The algorithms described were implemented using the C programming language, the Java programming language and the Performance API, PAPI for short.
 
 PAPI is used in conjunction with the C code because it allows us to directly collect several metrics related to the performance of the algorithms developed.
-It is not used with the Java code since it runs on the Java Virtual Machine, and therefore the performance registers are virtualized, which inhibits us from 
+It is not used with the Java code since it runs on the Java Virtual Machine, and therefore the performance registers are virtualised, which inhibits us from collecting their values.
 
 \subsection{Normal Matrix Multiplication}
 
-This algorithm is the \begin{em}naïve\end{em} implementation of the normal matrix multiplication procedure.
+This algorithm is the \emph{naïve} implementation of the normal matrix multiplication procedure.
 
 It iterates through each line of the first matrix and each column of the second matrix to perform the dot product between each vector, accumulating the results in the destination matrix.
 
 The algorithm can be (grossly) coded as the following:
 
-\begin{algorithm}
+\begin{algorithm}[H]
     \caption{Naïve Matrix Multiplication Algorithm}
     \begin{algorithmic}[1]
         \Function{OnMult}{$a, b$}
@@ -110,7 +130,7 @@ This algorithm is an improvement over the normal matrix multiplication algorithm
 It exploits the properties of cache locality to speed up the matrix product computations.
 
 The algorithm can be (grossly) coded as the following:
-\begin{algorithm}
+\begin{algorithm}[H]
     \caption{Line Matrix Multiplication Algorithm}
     \begin{algorithmic}[1]
         \Function{OnMultLine}{$a, b$}
@@ -128,17 +148,42 @@ The algorithm can be (grossly) coded as the following:
     \end{algorithmic}
 \end{algorithm}
 
-The main difference between this algorithm and the previous one is that, by changing the order of iteration of \lstinline{j} and \lstinline{k}, the processor does not need to load a new set of data into cache due to the multiplication order following the second matrix's lines, thus reducing drastically the number of cache misses resulting from the \begin{em}naïve\end{em} implementation.
+The main difference between this algorithm and the previous one is that, by changing the order of iteration of \lstinline{j} and \lstinline{k}, the processor does not need to load a new set of data into cache due to the multiplication order following the second matrix's lines, thus reducing drastically the number of cache misses resulting from the \emph{naïve} implementation.
 
 \subsection{Block Matrix Multiplication}
 
-This reasoning behind this algorithm is to "divide and conquer": by dividing the original matrix into many sub-matrices and performing the multiplication on these, the process is sped up.
+This reasoning behind this algorithm is to "divide and conquer": by dividing the original matrix into many sub-matrices and performing the multiplication on these, the process is sped up. 
 
-The algorithm used with each sub-matrix is the "Line by Line" one since it offers better performance over the \begin{em}naïve\end{em} implementation.
+The algorithm used with each sub-matrix is the "Line by Line" one since it offers better performance over the \begin{em}naïve\end{em} implementation. The algorithm can be coded like the following:
 
-Since the code for this algorithm is pretty big, it is not included in the report.
+\begin{algorithm}
+\caption{Block Matrix Multiplication Algorithm}
+\begin{algorithmic}[1]
+\Function{OnMultBlock}{$a, b$}
+\State{$mxSize \gets Length(a)$}\Comment{$a$ should have the same side length as $b$}
+\State{$blockSize \gets 32$}\Comment{Block size was chosen as 32, but other sizes can be chosen}
+\State{$c \gets matrix[mxSize][mxSize]$}\Comment{$c$ is initialized with $0$s}
+\For{$i \gets 0$ to $\frac{mxSize}{blockSize}$}
+\For{$j \gets 0$ to $\frac{mxSize}{blockSize}$}
+\For{$k \gets 0$ to $\frac{mxSize}{blockSize}$}
+\For{$iPrime \gets 0$ to $blockSize$}
+\For{$jPrime \gets 0$ to $blockSize$}
+\For{$kPrime \gets 0$ to $blockSize$}
+\State{$c_{i * blockSize + iPrime, j * blockSize + jPrime} \gets c_{i * blockSize + iPrime, j * blockSize + jPrime} + a_{i * blockSize + iPrime, k * blockSize + kPrime} * b_{k * blockSize + kPrime, j * blockSize + jPrime}$}
+\EndFor
+\EndFor
+\EndFor
+\EndFor
+\EndFor
+\EndFor
+\State\Return $c$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
 This algorithm also has another input parameter: the block size. This value controls the size of the resulting sub-matrices, which affects the performance of the algorithm, as can be seen in the following section.
+
+Contrary to the other two, this algorithm was developed only in the C programming language.
 
 \pagebreak
 
@@ -158,77 +203,405 @@ These metrics give us an overview of the behavior of the algorithms and allow us
 
 The following graphics depict the differences between the two languages used across the various metrics measured:
 
-\subsubsection{GFlop/\unit{\second}}
+\subsubsection{Execution time(\unit{\second})}
 
-\begin{figure}
+Since C compiles to native machine code, it was expected that the C code would run faster than the Java code: that hypothesis is confirmed by our empirical results.
+
+It is also worth noting  the exponential increase in the execution time of the algorithms with the increase of the matrix size : this is related to the complexity of these algorithms ($O(n^3)$).
+
+Other than that, as expected, the \emph{Line by Line} algorithm presents a much flatter curve with respect to the \emph{naïve} one.
+
+Surprisingly, however, are the results of the Block multiplication algorithm: the runtimes for different block sizes are similar, which indicates that this metric does not have a big impact in the overall performance of the algorithm (at least in the way it was coded by us).
+
+\begin{figure}[H]
     \centering
-    \begin{tikzpicture}
-        \begin{axis}[
-                title={Naïve Implementation},
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Naïve} Implementation},
                 xlabel={Size},
-                ylabel={GFlop/\unit{\second}},
-                legend pos=north east,
-                xtick=data,
-                width=16cm,
-                height=10cm,
+                ylabel={second(\unit{\second})},
+                legend pos=north west,
+                height=6cm
             ]
-            \addplot[
-                smooth,
-                mark=o,
-                red
-            ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-GFlops.csv};
-            \addlegendentry{C}
-            \addplot[
-                smooth,
-                mark=x,
-                blue
-            ] table [x=Matrix Size, y=Java_N, col sep=comma]{CPD-CSV-GFlops.csv};
-            \addlegendentry{Java}
-        \end{axis}
-    \end{tikzpicture}
-    \caption{GFlop/\unit{\second} for both implementations of the naïve algorithm}
-    \label{fig:ngf}
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-Runtimes.csv};
+                \addlegendentry{C}
+                \addplot[
+                    smooth,
+                    mark=x,
+                    blue
+                ] table [x=Matrix Size, y=Java_N, col sep=comma]{CPD-CSV-Runtimes.csv};
+                \addlegendentry{Java}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{Run time for the \emph{naïve} algorithm (C/Java)}
+    \end{subfigure}
+    \hfill%
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Line by Line} Implementation},
+                xlabel={Size},
+                ylabel={seconds(\unit{\second})},
+                legend pos=north west,
+                height=6cm
+            ]
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_L, col sep=comma]{CPD-CSV-Runtimes.csv};
+                \addlegendentry{C}
+                \addplot[
+                    smooth,
+                    mark=x,
+                    blue
+                ] table [x=Matrix Size, y=Java_L, col sep=comma]{CPD-CSV-Runtimes.csv};
+                \addlegendentry{Java}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{Run time for the \emph{line by line} algorithm (C/Java)}
+    \end{subfigure}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \begin{tikzpicture}
         \begin{axis}[
-                title={"Line by Line" Implementation},
-                xlabel={Size},
-                ylabel={GFlop/\unit{\second}},
-                legend pos=north east,
-                xtick=data,
-                width=16cm,
-                height=10cm,
-            ]
+            title={\emph{Block} Implementation},
+            xlabel={Size},
+            ylabel={seconds(\unit{\second})},
+    zx        legend pos=north west,
+            height=7cm,
+            width=16cm
+        ]
             \addplot[
                 smooth,
                 mark=o,
                 red
-            ] table [x=Matrix Size, y=C_L, col sep=comma]{CPD-CSV-GFlops.csv};
-            \addlegendentry{C}
+            ] table [x=Matrix Size, y=C_B_128, col sep=comma]{CPD-CSV-Runtimes.csv};
+            \addlegendentry{Blk. Size 128}
             \addplot[
                 smooth,
-                mark=x,
+                mark=o,
+                green
+            ] table [x=Matrix Size, y=C_B_256, col sep=comma]{CPD-CSV-Runtimes.csv};
+            \addlegendentry{Blk. Size 256}
+            \addplot[
+                smooth,
+                mark=o,
                 blue
-            ] table [x=Matrix Size, y=Java_L, col sep=comma]{CPD-CSV-GFlops.csv};
-            \addlegendentry{Java}
+            ] table [x=Matrix Size, y=C_B_512, col sep=comma]{CPD-CSV-Runtimes.csv};
+            \addlegendentry{Blk. Size 512}
         \end{axis}
     \end{tikzpicture}
-    \caption{GFlop/\unit{\second} for both implementations of the "line by line" algorithm}    
-    \label{fig:lblgf}
+    \caption{Run time for the \emph{block} algorithm (C)}
+\end{figure}
+
+\subsubsection{GFlop/\unit{\second}}
+
+As expected, the C code shows an increased amount of floating point operations per second when compared to the Java one (directly related to the difference in execution times). However, it is interesting to note that, for a small enough matrix size, for the \emph{naïve} implementation, the Java implementation outperforms the C one (this could not be noticed in the execution time graph).
+
+Additionally, even though the various block sizes produced little variation in the execution times of the algorithms, the same cannot be said for the GFLOP/s, with the bigger amount being produced by the smaller block size.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Naïve} Implementation},
+                xlabel={Size},
+                ylabel={GFlop/\unit{\second}},
+                legend pos=north east,
+                height=6cm
+            ]
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-GFlops.csv};
+                \addlegendentry{C}
+                \addplot[
+                    smooth,
+                    mark=x,
+                    blue
+                ] table [x=Matrix Size, y=Java_N, col sep=comma]{CPD-CSV-GFlops.csv};
+                \addlegendentry{Java}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{GFlop/\unit{\second} for the \emph{naïve} algorithm (C/Java)}
+    \end{subfigure}
+    \hfill%
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Line by Line} Implementation},
+                xlabel={Size},
+                ylabel={GFlop/\unit{\second}},
+                legend pos=north east,
+                height=6cm
+            ]
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_L, col sep=comma]{CPD-CSV-GFlops.csv};
+                \addlegendentry{C}
+                \addplot[
+                    smooth,
+                    mark=x,
+                    blue
+                ] table [x=Matrix Size, y=Java_L, col sep=comma]{CPD-CSV-GFlops.csv};
+                \addlegendentry{Java}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{GFlop/\unit{\second} for the \emph{line by line} algorithm (C/Java)}
+    \end{subfigure}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            title={\emph{Block} Implementation},
+            xlabel={Size},
+            ylabel={GFlop/\unit{\second}},
+            legend pos=north east,
+            height=7cm,
+            width=16cm
+        ]
+            \addplot[
+                smooth,
+                mark=o,
+                red
+            ] table [x=Matrix Size, y=C_B_128, col sep=comma]{CPD-CSV-GFlops.csv};
+            \addlegendentry{Blk. Size 128}
+            \addplot[
+                smooth,Só para avisar que eu e o Nuno já estamos na altice. Caso queira que nos reunamos agora ou durante o dia, estaremos disponíveis ￼
+
+
+                mark=o,
+                green
+            ] table [x=Matrix Size, y=C_B_256, col sep=comma]{CPD-CSV-GFlops.csv};
+            \addlegendentry{Blk. Size 256}
+            \addplot[
+                smooth,
+                mark=o,
+                blue
+            ] table [x=Matrix Size, y=C_B_512, col sep=comma]{CPD-CSV-GFlops.csv};
+            \addlegendentry{Blk. Size 512}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{GFlop/\unit{\second} for the \emph{block} algorithm (C)}
+\end{figure}
+
+\subsubsection{Level 1 Data Cache Misses}
+
+The 3 different block sizes produced little to no variation in the amount of cache misses detected, which indicates that the use of the L1 Data cache cannot accommodate for the frequency of data accesses.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Naïve} Implementation},
+                xlabel={Size},
+                ylabel={L1 Data Cache Misses},
+                legend pos=north west,
+                height=6cm
+            ]
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-L1DCM.csv};
+            \end{axis}
+        \end{tikzpicture}
+        \caption{L1 Data Cache Misses for the \emph{naïve} algorithm}
+    \end{subfigure}
+    \hfill%
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Line by Line} Implementation},
+                xlabel={Size},
+                ylabel={L1 Data Cache Misses},
+                legend pos=north west,
+                height=6cm
+            ]
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_L, col sep=comma]{CPD-CSV-L1DCM.csv};
+                \addlegendentry{C}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{L1 Data Cache Misses for the \emph{line by line} algorithm}
+    \end{subfigure}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            title={\emph{Block} Implementation},
+            xlabel={Size},
+            ylabel={L1 Data Cache Misses},
+            legend pos=north west,
+            height=7cm,
+            width=16cm
+        ]
+            \addplot[
+                smooth,
+                mark=o,
+                red
+            ] table [x=Matrix Size, y=C_B_128, col sep=comma]{CPD-CSV-L1DCM.csv};
+            \addlegendentry{Blk. Size 128}
+            \addplot[
+                smooth,
+                mark=o,
+                green
+            ] table [x=Matrix Size, y=C_B_256, col sep=comma]{CPD-CSV-L1DCM.csv};
+            \addlegendentry{Blk. Size 256}
+            \addplot[
+                smooth,
+                mark=o,
+                blue
+            ] table [x=Matrix Size, y=C_B_512, col sep=comma]{CPD-CSV-L1DCM.csv};
+            \addlegendentry{Blk. Size 512}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{L1 Data Cache Misses for the \emph{block} algorithm}
+\end{figure}
+
+\subsubsection{Level 2 Data Cache Misses}
+
+Contrary to the previous section, we see a near $2x$ improvement between the biggest and the smallest block size tested. This makes sense since the bigger block size loads more data into the L2 Data cache, which is more readily available when it is needed than with smaller sized blocks.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Naïve} Implementation},
+                xlabel={Size},
+                ylabel={L2 Data Cache Misses},
+                legend pos=north west,
+                height=6cm
+            ]
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_N, col sep=comma]{CPD-CSV-L2DCM.csv};
+                \addlegendentry{C}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{L2 Data Cache Misses for the \emph{naïve} algorithm}
+    \end{subfigure}
+    \hfill%
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                title={\emph{Line by Line} Implementation},
+                xlabel={Size},
+                ylabel={L2 Data Cache Misses},
+                legend pos=north west,
+                height=6cm
+            ]
+                \addplot[
+                    smooth,
+                    mark=o,
+                    red
+                ] table [x=Matrix Size, y=C_L, col sep=comma]{CPD-CSV-L2DCM.csv};
+                \addlegendentry{C}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{L2 Data Cache Misses for the \emph{line by line} algorithm}
+    \end{subfigure}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            title={\emph{Block} Implementation},
+            xlabel={Size},
+            ylabel={L2 Data Cache Misses},
+            legend pos=north west,
+            height=7cm,
+            width=16cm
+        ]
+            \addplot[
+                smooth,
+                mark=o,
+                red
+            ] table [x=Matrix Size, y=C_B_128, col sep=comma]{CPD-CSV-L2DCM.csv};
+            \addlegendentry{Blk. Size 128}
+            \addplot[
+                smooth,
+                mark=o,
+                green
+            ] table [x=Matrix Size, y=C_B_256, col sep=comma]{CPD-CSV-L2DCM.csv};
+            \addlegendentry{Blk. Size 256}
+            \addplot[
+                smooth,
+                mark=o,
+                blue
+            ] table [x=Matrix Size, y=C_B_512, col sep=comma]{CPD-CSV-L2DCM.csv};
+            \addlegendentry{Blk. Size 512}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{L2 Data Cache Misses for the \emph{block} algorithm}
 \end{figure}
 
 \section{Conclusions}
 
-All of the project's goals were achieved -
+In this project, we implemented and analyzed three different algorithms for matrix multiplication: Normal Matrix Multiplication, Line-by-Line Matrix Multiplication, and Block Matrix Multiplication. We used C++ and Java programming languages and  the PAPI Performance API for C++ code to collect performance data.
+
+The performance data collected from PAPI Performance API shows that Block Matrix Multiplication is the fastest algorithm among the three, followed by Line-by-Line Matrix Multiplication, and lastly, Normal Matrix Multiplication. This is consistent with our expectations as Block Matrix Multiplication is optimized for cache utilization, and cache hits are faster than memory accesses, which are utilized by the other algorithms.
+
+The following table shows the participation percentage of each team member:
+
+
+
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{||l c||} 
+        \hline
+        Member & Participation \\ [0.5ex] 
+        \hline\hline
+        Guilherme Almeida & 33.3 \% \\
+        João Malva & 33.3 \% \\
+        Nuno Pereira & 33.3 \% \\
+        \hline
+    \end{tabular}
+\end{table}
+
+In conclusion, the Block Matrix Multiplication algorithm is the most efficient method for matrix multiplication, and it can be used to optimize various applications that require matrix multiplication. Additionally, we successfully collaborated on this project, with each member contributing equally to the project's success.
 
 \appendix
 \section{Appendix}
 
 \subsection{Code}
 
-\noindent Versions of the algorithms in C and Java are available in folder \lstinline{src/}.
+\noindent Versions of the algorithms in C/Java are available in folder \lstinline{src/}.
+
+\printindex
 
 \end{document}
+

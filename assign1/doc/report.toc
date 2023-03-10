@@ -1,0 +1,9 @@
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {section}{\numberline {2}Setup}{3}{section.2}%
+\contentsline {section}{\numberline {3}Algorithm Analysis}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Normal Matrix Multiplication}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}"Line by Line" Matrix Multiplication}{4}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Block Matrix Multiplication}{4}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Performance Analysis}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Data graphics}{6}{subsection.4.1}%
+\contentsline {subsubsection}{\numberline {4.1.1}Execution time(\unit {\second })}{6}{subsubsection.4.1.1}%
