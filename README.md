@@ -1,10 +1,9 @@
 # CPD Projects
 
-CPD Projects of group T&lt;m&gt;&lt;n&gt;G&lt;p&gt;&lt;q&gt;.
+CPD Projects of group T07G15.
 
 Group members:
 
-1. &lt;first name&gt; &lt;family name&gt; (&lt;email address&gt;)
-2. &lt;first name&gt; &lt;family name&gt; (&lt;email address&gt;)
-3. &lt;first name&gt; &lt;family name&gt; (&lt;email address&gt;)
-4. &lt;first name&gt; &lt;family name&gt; (&lt;email address&gt;)
+1. &lt;Guilherme&gt; &lt;Almeida&gt; (&lt;up202006137@fe.up.pt&gt;)
+2. &lt;Joao&gt; &lt;Malva&gt; (&lt;up202006605@fe.up.pt&gt;)
+3. &lt;Nuno&gt; &lt;Pereira&gt; (&lt;up202007865@fe.up.pt&gt;)
