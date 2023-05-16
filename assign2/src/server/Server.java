@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server implements Runnable{
+    private static final int MAX_ATTEMPS = 3;
     private final int port;
     private final int maxPlayersPerGame;
     private final int maxConcurrentGames;
@@ -74,15 +75,25 @@ public class Server implements Runnable{
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true);
 
-            String username = reader.readLine();
-            String password = reader.readLine();
+            int attempts = 0;
+            boolean isAuthenticated = false;
 
-            boolean isAuthenticated = authenticateUser(username, password);
+            while (attempts < MAX_ATTEMPS && ! isAuthenticated) {
 
-            if (isAuthenticated) {
-                writer.println("Authentication successful");
-            } else {
-                writer.println("Authentication failed");
+                String username = reader.readLine();
+                String password = reader.readLine();
+
+                isAuthenticated = authenticateUser(username, password);
+
+                if (isAuthenticated) {
+                    writer.println("Authentication successful");
+                } else {
+                    attempts++;
+                    writer.println("Authentication failed. Attempts remaining: " + (3 - attempts));
+                }
+            }
+
+            if (!isAuthenticated) {
                 clientSocket.close();
             }
         } catch (IOException e) {
