@@ -46,7 +46,7 @@ public class Server implements Runnable {
             serverSocketChannel.bind(new InetSocketAddress(port));
             serverSocketChannel.configureBlocking(false);
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-            System.out.println("Server started on port" + port);
+            System.out.println("Server started on port " + port);
 
             while (true) {
                 selector.select();
@@ -99,6 +99,7 @@ public class Server implements Runnable {
             while (attempts < MAX_ATTEMPS && !isAuthenticated) {
 
                 String username = readMessage(clientSocketChannel);
+                System.out.println("USERNAME: " + username);
                 String password = readMessage(clientSocketChannel);
 
                 isAuthenticated = authenticateUser(username, password);
@@ -130,14 +131,17 @@ public class Server implements Runnable {
 
     private String readMessage(SocketChannel socketChannel) throws IOException {
         buffer.clear();
-        socketChannel.read(buffer);
+        int bytesRead = socketChannel.read(buffer);
+        if (bytesRead == -1) {
+            throw new IOException("Connection closed");
+        }
         buffer.flip();
-        return StandardCharsets.UTF_8.decode(buffer).toString();
+        return StandardCharsets.UTF_8.decode(buffer).toString().trim();
     }
 
     private boolean authenticateUser(String username, String password) {
         // TODO: Implement this placeholder logic
-        return true;
-        //return username.equals("test") && password.equals("test");
+        // return true;
+        return username.equals("test") && password.equals("test");
     }
 }

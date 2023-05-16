@@ -29,8 +29,6 @@ public class Client implements Runnable {
             handleAuthentication();
             // Handle game-playing logic here
 
-            socketChannel.close();
-            System.out.println("Disconnected from server.");
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -76,7 +74,11 @@ public class Client implements Runnable {
 
     private String readMessage() throws IOException {
         buffer.clear();
-        socketChannel.read(buffer);
+        int bytesRead = socketChannel.read(buffer);
+
+        if (bytesRead == -1)
+            throw new IOException("Connection closed");
+
         buffer.flip();
         return StandardCharsets.UTF_8.decode(buffer).toString();
     }
