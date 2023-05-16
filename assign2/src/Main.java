@@ -1,36 +1,31 @@
-import client.Client;
 import server.Server;
+import client.Client;
+
+import java.io.IOException;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        String host = "localhost";
+        int port = 8080;
+        int maxPlayersPerGame = 2;
+        int maxConcurrentGames = 5;
+        List<SocketChannel> connectedClients = new ArrayList<>();
 
-        Config config = null;
+        Server server = new Server(port, maxPlayersPerGame, maxConcurrentGames, connectedClients);
+        Thread serverThread = new Thread(server);
+        serverThread.start();
 
+        // Wait a bit to ensure that the server has time to start up
         try {
-            config = Config.parseConfig(args);
-        } catch (Config.InvalidConfigValuesException e) {
-            Logger.error(e.getMessage());
-            System.exit(1);
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
-        // If we reach this point it means that we correctly parsed our config values.
-
-        Runnable app = null;
-        try {
-            var appType = config.get("type");
-
-            app = switch (appType.toLowerCase()) {
-                case "server" -> new Server(port, maxPlayersPerGame, maxConcurrentGames, gameThreadPool, connectedClients);
-                case "client" -> new Client();
-                default -> throw new Exception("Unknown app type");
-            };
-        } catch (Exception e) {
-            Logger.error(e.getMessage());
-            System.exit(1);
-        }
-
-        // if we reached this point, that means we are ready to roll
-
-        app.run();
+        Client client = new Client(host, port);
+        new Thread(client).start();
     }
 }

@@ -1,43 +1,42 @@
 package client;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
 
 public class Client implements Runnable {
 
     private final String serverHost;
     private final int serverPort;
-    private Socket socket;
-    private BufferedReader reader;
-    private PrintWriter writer;
+    private SocketChannel socketChannel;
+    private ByteBuffer buffer;
 
     public Client(String serverHost, int serverPort) {
         this.serverHost = serverHost;
         this.serverPort = serverPort;
+        this.buffer = ByteBuffer.allocate(1024); // arbitrary buffer size
     }
 
     public void connect() {
         try {
-            socket = new Socket(serverHost, serverPort);
+            socketChannel = SocketChannel.open();
+            socketChannel.connect(new InetSocketAddress(serverHost, serverPort));
             System.out.println("Connected to server: " + serverHost + ":" + serverPort);
-
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new PrintWriter(socket.getOutputStream(), true);
 
             handleAuthentication();
             // Handle game-playing logic here
 
-            socket.close();
+            socketChannel.close();
             System.out.println("Disconnected from server.");
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             try {
-                if (socket != null) {
-                    socket.close();
+                if (socketChannel != null) {
+                    socketChannel.close();
                     System.out.println("Disconnected from server.");
                 }
             } catch (IOException e) {
@@ -48,22 +47,38 @@ public class Client implements Runnable {
 
     private void handleAuthentication() {
         try {
-            BufferedReader userInputReader = new BufferedReader(new InputStreamReader(System.in));
+            Scanner userInputScanner = new Scanner(System.in);
 
             System.out.println("Enter username: ");
-            String username = userInputReader.readLine();
+            String username = userInputScanner.nextLine();
 
             System.out.println("Enter password: ");
-            String password = userInputReader.readLine();
+            String password = userInputScanner.nextLine();
 
-            writer.println(username);
-            writer.println(password);
+            sendMessage(username);
+            sendMessage(password);
 
-            String response = reader.readLine();
+            String response = readMessage();
             System.out.println("Server response: " + response);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void sendMessage(String message) throws IOException {
+        buffer.clear();
+        buffer.put((message + "\n").getBytes(StandardCharsets.UTF_8));
+        buffer.flip();
+        while(buffer.hasRemaining()) {
+            socketChannel.write(buffer);
+        }
+    }
+
+    private String readMessage() throws IOException {
+        buffer.clear();
+        socketChannel.read(buffer);
+        buffer.flip();
+        return StandardCharsets.UTF_8.decode(buffer).toString();
     }
 
     @Override

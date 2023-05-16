@@ -1,16 +1,18 @@
-import java.io.BufferedReader;
+package server;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class Game implements Runnable {
-    private final List<Socket> userSockets;
+    private final List<SocketChannel> userSockets;
     private final int[][] board = new int[3][3]; // for Tic Tac Toe
     private final int[] scores = new int[2];
+    private final ByteBuffer buffer = ByteBuffer.allocate(1024);
 
-    public Game(List<Socket> userSockets) {
+    public Game(List<SocketChannel> userSockets) {
         this.userSockets = userSockets;
     }
 
@@ -29,13 +31,11 @@ public class Game implements Runnable {
         int currentPlayer = 0;
         while (!isGameOver()) {
             try {
-                Socket currentSocket = userSockets.get(currentPlayer);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(currentSocket.getInputStream()));
-                PrintWriter writer = new PrintWriter(currentSocket.getOutputStream(), true);
+                SocketChannel currentSocket = userSockets.get(currentPlayer);
 
                 // Ask for the player's move
-                writer.println("Your move: ");
-                String move = reader.readLine();
+                sendMessage("Your move: ", currentSocket);
+                String move = readMessage(currentSocket);
                 // Assume move is a string like "1,1" representing the row and column to place their mark
 
                 String[] parts = move.split(",");
@@ -48,22 +48,41 @@ public class Game implements Runnable {
 
                     // Check if the current player has won
                     if (checkWin(currentPlayer)) {
-                        writer.println("Congratulations! You won.");
+                        sendMessage("Congratulations! You won.", currentSocket);
                         scores[currentPlayer]++;
                         break;
                     } else if (isBoardFull()) {
-                        writer.println("The game is a draw.");
+                        sendMessage("The game is a draw.", currentSocket);
                         break;
                     }
 
                     currentPlayer = 1 - currentPlayer; // Switch player
                 } else {
-                    writer.println("Invalid move. Try again.");
+                    sendMessage("Invalid move. Try again.", currentSocket);
                 }
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private String readMessage(SocketChannel socketChannel) throws IOException {
+        buffer.clear();
+        int bytesRead = socketChannel.read(buffer);
+        if (bytesRead == -1) {
+            throw new IOException("Connection closed");
+        }
+        buffer.flip();
+        return StandardCharsets.UTF_8.decode(buffer).toString().trim();
+    }
+
+    private void sendMessage(String message, SocketChannel socketChannel) throws IOException {
+        buffer.clear();
+        buffer.put((message + "\n").getBytes(StandardCharsets.UTF_8));
+        buffer.flip();
+        while (buffer.hasRemaining()) {
+            socketChannel.write(buffer);
         }
     }
 
@@ -111,3 +130,5 @@ public class Game implements Runnable {
         return scores;
     }
 }
+
+
