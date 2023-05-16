@@ -80,7 +80,7 @@ public class Client implements Runnable {
             throw new IOException("Connection closed");
 
         buffer.flip();
-        return StandardCharsets.UTF_8.decode(buffer).toString();
+        return StandardCharsets.UTF_8.decode(buffer).toString().trim();
     }
 
     @Override
