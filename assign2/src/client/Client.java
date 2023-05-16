@@ -34,6 +34,15 @@ public class Client implements Runnable {
             System.out.println("Disconnected from server.");
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                if (socket != null) {
+                    socket.close();
+                    System.out.println("Disconnected from server.");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
