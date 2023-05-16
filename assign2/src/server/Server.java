@@ -7,141 +7,123 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import app.Main;
+import common.decoding.Decoder;
+import common.decoding.UTF8Decoder;
 
-public class Server implements Runnable {
-    private static final int MAX_ATTEMPS = 3;
+public class Server implements Main.Application {
+
+    private final ExecutorService threadPool;
+
+    private ServerSocketChannel serverSocket;
+    private Selector channelSelector;
+
     private final int port;
-    private final int maxPlayersPerGame;
-    private final int maxConcurrentGames;
-    private final ExecutorService gameThreadPool;
-    private final Queue<SocketChannel> gameQueue;
-    private final Object lock;
+    private boolean accepting = true; // TODO: figure out when to change this
 
-    private Selector selector;
-    private ByteBuffer buffer;
+    private final Decoder stringDecoder;
 
-    public Server(int port, int maxPlayersPerGame, int maxConcurrentGames, List<SocketChannel> connectedClients) throws IOException {
+    private Server(int port, int macConcurrentGames) {
+        this.threadPool = Executors.newFixedThreadPool(macConcurrentGames);
         this.port = port;
-        this.maxPlayersPerGame = maxPlayersPerGame;
-        this.maxConcurrentGames = maxConcurrentGames;
-        this.gameThreadPool = Executors.newFixedThreadPool(maxConcurrentGames);
-        this.gameQueue = new LinkedList<>();
-        this.lock = new Object();
-        this.selector = Selector.open();
-        this.buffer = ByteBuffer.allocate(1024);
+        this.stringDecoder = new UTF8Decoder();
+    }
+
+    public static Server configure(String[] args) {
+
+        // assume that we have the correct amount of arguments, if not throw an error
+        if (args.length < 2) {
+            return null;
+        }
+
+        // we might have errors parsing the input since it comes from the user, sanitize it
+        try {
+            int port = Integer.parseInt(args[0]);
+
+            // negative ports throw, 0 triggers a bind to an ephemeral port
+            if (port <= 0) return null;
+
+            int maxConcurrentGames = Integer.parseInt(args[1]);
+
+            // negative values are invalid
+            if (maxConcurrentGames < 0) return null;
+
+            return new Server(port, maxConcurrentGames);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override
     public void run() {
-        try {
-            ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-            serverSocketChannel.bind(new InetSocketAddress(port));
-            serverSocketChannel.configureBlocking(false);
-            serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-            System.out.println("Server started on port " + port);
 
-            while (true) {
-                selector.select();
-                Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
+        System.out.printf("Starting server on port %d%n", this.port);
 
-                while (keyIterator.hasNext()) {
-                    SelectionKey key = keyIterator.next();
+        try (ServerSocketChannel serverSocket = ServerSocketChannel.open(); Selector selector = Selector.open()) {
 
-                    if (key.isAcceptable()) {
-                        SocketChannel clientSocketChannel = serverSocketChannel.accept();
-                        clientSocketChannel.configureBlocking(false);
-                        clientSocketChannel.register(selector, SelectionKey.OP_READ);
-                        System.out.println("New client connected: " + clientSocketChannel);
-                        synchronized (lock) {
-                            gameQueue.offer(clientSocketChannel);
-                        }
-                        handleAuthentication(clientSocketChannel);
-                        handleGameQueue();
+            // since we use a try-with-resource, we guarantee that the server socket will be closed
+            this.serverSocket = serverSocket;
+            this.channelSelector = selector;
+
+            this.serverSocket
+                    .bind(new InetSocketAddress(this.port)) // bind to localhost:<PORT>
+                    .configureBlocking(false) // make it non-blocking
+                    .register(this.channelSelector, SelectionKey.OP_ACCEPT); // register a selector for accepting client connections
+
+            while (this.accepting) {
+                // this.channelSelector.select();
+
+                int clientsReady = this.channelSelector.select();
+                if (clientsReady == 0) continue;
+
+                var selectedKeys = selector.selectedKeys();
+                for (SelectionKey key : selectedKeys) {
+
+                    // register the selector for clients reads, so we can process messages and accept clients in the same thread
+                    if (key.isAcceptable()) { // received client connection
+
+                        var clientSocket = this.serverSocket.accept();
+
+                        if (clientSocket == null) continue;
+
+                        System.out.println("Client received: " + clientSocket.toString());
+
+                        clientSocket
+                                .configureBlocking(false)
+                                .register(this.channelSelector, SelectionKey.OP_READ);
+
+                        // no need to do any more processing, any further communication is handled by the next "else if" clause
+                    } else if (key.isReadable()) { // received data on this selector
+
+                        System.out.println("Boas");
+
+                        this.handleMessage(key); // change to pass the key
                     }
-
-                    keyIterator.remove();
                 }
+                selectedKeys.clear();
             }
-
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException exception) {
+            System.err.printf("Error occurred while serving clients: %s%n", exception.getMessage());
         }
     }
 
-    private void handleGameQueue() {
-        if (gameQueue.size() >= maxPlayersPerGame) {
-            List<SocketChannel> gamePlayers = new ArrayList<>();
+    int test = 5;
 
-            synchronized (lock) {
-                for (int i = 0; i < maxPlayersPerGame; i++) {
-                    gamePlayers.add(gameQueue.poll());
-                }
-            }
+    // pass in the key to give us more control
+    public void handleMessage(SelectionKey key) throws IOException {
+        var clientChannel = (SocketChannel) key.channel();
 
-            Runnable gameInstance = new Game(gamePlayers);
-            gameThreadPool.execute(gameInstance);
-        }
-    }
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
 
-    private void handleAuthentication(SocketChannel clientSocketChannel) {
-        try {
-            int attempts = 0;
-            boolean isAuthenticated = false;
-
-            while (attempts < MAX_ATTEMPS && !isAuthenticated) {
-
-                String username = readMessage(clientSocketChannel);
-                System.out.println("USERNAME: " + username);
-                String password = readMessage(clientSocketChannel);
-
-                isAuthenticated = authenticateUser(username, password);
-
-                if (isAuthenticated) {
-                    sendMessage("Authentication successful", clientSocketChannel);
-                } else {
-                    attempts++;
-                    sendMessage("Authentication failed. Attempts remaining: " + (3 - attempts), clientSocketChannel);
-                }
-            }
-
-            if (!isAuthenticated) {
-                clientSocketChannel.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void sendMessage(String message, SocketChannel socketChannel) throws IOException {
-        buffer.clear();
-        buffer.put((message + "\n").getBytes(StandardCharsets.UTF_8));
+        clientChannel.read(buffer);
         buffer.flip();
-        while (buffer.hasRemaining()) {
-            socketChannel.write(buffer);
-        }
-    }
 
-    private String readMessage(SocketChannel socketChannel) throws IOException {
-        buffer.clear();
-        int bytesRead = socketChannel.read(buffer);
-        if (bytesRead == -1) {
-            throw new IOException("Connection closed");
-        }
-        buffer.flip();
-        return StandardCharsets.UTF_8.decode(buffer).toString().trim();
-    }
+        System.out.println(this.stringDecoder.decode(buffer));
 
-    private boolean authenticateUser(String username, String password) {
-        // TODO: Implement this placeholder logic
-        // return true;
-        return username.equals("test") && password.equals("test");
+        if (test-- == 0)
+            System.exit(1);
     }
 }

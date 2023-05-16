@@ -1,12 +1,12 @@
-import server.Server;
-import client.Client;
+import server.OldServer;
+import client.OldClient;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Main {
+public class OldMain {
     public static void main(String[] args) throws IOException {
         String host = "localhost";
         int port = 8080;
@@ -14,7 +14,7 @@ public class Main {
         int maxConcurrentGames = 5;
         List<SocketChannel> connectedClients = new ArrayList<>();
 
-        Server server = new Server(port, maxPlayersPerGame, maxConcurrentGames, connectedClients);
+        OldServer server = new OldServer(port, maxPlayersPerGame, maxConcurrentGames, connectedClients);
         Thread serverThread = new Thread(server);
         serverThread.start();
 
@@ -25,7 +25,7 @@ public class Main {
             e.printStackTrace();
         }
 
-        Client client = new Client(host, port);
+        OldClient client = new OldClient(host, port);
         new Thread(client).start();
     }
 }

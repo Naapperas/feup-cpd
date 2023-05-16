@@ -1,91 +1,67 @@
 package client;
 
-import java.io.IOException;
+import common.encoding.Encoder;
+import common.encoding.UTF8Encoder;
+
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
+import java.nio.channels.UnresolvedAddressException;
+import app.Main;
 
-public class Client implements Runnable {
+public class Client implements Main.Application {
 
-    private final String serverHost;
-    private final int serverPort;
-    private SocketChannel socketChannel;
-    private ByteBuffer buffer;
+    private SocketChannel channel;
 
-    public Client(String serverHost, int serverPort) {
-        this.serverHost = serverHost;
-        this.serverPort = serverPort;
-        this.buffer = ByteBuffer.allocate(1024); // arbitrary buffer size
+    private String host;
+    private int port;
+
+    private Encoder byteEncoder;
+
+    private Client(String host, int port) {
+        this.host = host;
+        this.port = port;
+        this.byteEncoder = new UTF8Encoder();
     }
 
-    public void connect() {
+    public static Client create(String[] args) {
+
+        // assume that we have the correct amount of arguments, if not throw an error
+        if (args.length < 2) {
+            return null;
+        }
+
+        // we might have errors parsing the input since it comes from the user, sanitize it
         try {
-            socketChannel = SocketChannel.open();
-            socketChannel.connect(new InetSocketAddress(serverHost, serverPort));
-            System.out.println("Connected to server: " + serverHost + ":" + serverPort);
+            String host = args[0];
 
-            handleAuthentication();
-            // Handle game-playing logic here
+            int port = Integer.parseInt(args[1]);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (socketChannel != null) {
-                    socketChannel.close();
-                    System.out.println("Disconnected from server.");
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            // negative values are invalid
+            if (port < 0) return null;
+
+            return new Client(host, port);
+        } catch (Exception e) {
+            return null;
         }
-    }
-
-    private void handleAuthentication() {
-        try {
-            Scanner userInputScanner = new Scanner(System.in);
-
-            System.out.println("Enter username: ");
-            String username = userInputScanner.nextLine();
-
-            System.out.println("Enter password: ");
-            String password = userInputScanner.nextLine();
-
-            sendMessage(username);
-            sendMessage(password);
-
-            String response = readMessage();
-            System.out.println("Server response: " + response);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void sendMessage(String message) throws IOException {
-        buffer.clear();
-        buffer.put((message + "\n").getBytes(StandardCharsets.UTF_8));
-        buffer.flip();
-        while(buffer.hasRemaining()) {
-            socketChannel.write(buffer);
-        }
-    }
-
-    private String readMessage() throws IOException {
-        buffer.clear();
-        int bytesRead = socketChannel.read(buffer);
-
-        if (bytesRead == -1)
-            throw new IOException("Connection closed");
-
-        buffer.flip();
-        return StandardCharsets.UTF_8.decode(buffer).toString().trim();
     }
 
     @Override
     public void run() {
-        connect();
-    }
 
+        try (SocketChannel channel = SocketChannel.open(new InetSocketAddress(this.host, this.port))) {
+
+            this.channel = channel;
+
+            ByteBuffer buffer = this.byteEncoder.encode("Hello world");
+
+            while (buffer.hasRemaining())
+                this.channel.write(buffer);
+
+        } catch (UnresolvedAddressException e) {
+            System.err.printf("Failed to connect to server at %s:%d%n", this.host, this.port);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

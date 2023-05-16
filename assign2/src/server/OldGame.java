@@ -6,13 +6,13 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class Game implements Runnable {
+public class OldGame implements Runnable {
     private final List<SocketChannel> userSockets;
     private final int[][] board = new int[3][3]; // for Tic Tac Toe
     private final int[] scores = new int[2];
     private final ByteBuffer buffer = ByteBuffer.allocate(1024);
 
-    public Game(List<SocketChannel> userSockets) {
+    public OldGame(List<SocketChannel> userSockets) {
         this.userSockets = userSockets;
     }
 
