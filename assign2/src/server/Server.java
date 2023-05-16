@@ -64,7 +64,7 @@ public class Server implements Runnable{
                 }
             }
 
-            Runnable gameInstance = new Game(maxPlayersPerGame, gamePlayers);
+            Runnable gameInstance = new Game(gamePlayers);
             gameThreadPool.execute(gameInstance);
         }
     }
