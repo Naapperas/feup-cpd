@@ -20,7 +20,7 @@ public class Main {
             var appType = config.get("type");
 
             app = switch (appType.toLowerCase()) {
-                case "server" -> new Server();
+                case "server" -> new Server(port, maxPlayersPerGame, maxConcurrentGames, gameThreadPool, connectedClients);
                 case "client" -> new Client();
                 default -> throw new Exception("Unknown app type");
             };
