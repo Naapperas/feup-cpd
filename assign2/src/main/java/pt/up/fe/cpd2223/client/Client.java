@@ -8,6 +8,7 @@ import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
 import pt.up.fe.cpd2223.common.message.LoginMessage;
 import pt.up.fe.cpd2223.common.message.Message;
 import pt.up.fe.cpd2223.common.message.MessageType;
+import pt.up.fe.cpd2223.common.message.RegisterMessage;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -57,13 +58,15 @@ public class Client implements Main.Application {
         }
     }
 
-    public boolean handleAuth(SocketChannel channel) throws IOException {
+    public boolean handleLogin(SocketChannel channel) throws IOException {
         System.out.print("Username: ");
         String username = sc.next();
         System.out.print("Password: ");
         String password = sc.next();
 
-        var authMessage = new LoginMessage(username, password);
+        var authMessage = new RegisterMessage(username, password);
+
+        System.out.println(authMessage.toFormattedString());
 
         channel.write(this.messageEncoder.encode(authMessage.toFormattedString()));
 
@@ -94,7 +97,7 @@ public class Client implements Main.Application {
 
             while (retries-- > 0) {
 
-                authenticated = this.handleAuth(channel);
+                authenticated = this.handleLogin(channel);
 
                 if (authenticated) break;
                 else {

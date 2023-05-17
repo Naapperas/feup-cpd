@@ -14,7 +14,7 @@ public abstract class Message {
         var messageType = MessageType.from(type);
 
         return switch (messageType) {
-            case AUTH_LOGIN, AUTH_REGISTER -> {
+            case AUTH_LOGIN -> {
                 var payload = parts[1];
 
                 var info = payload.split(Message.payloadDataSeparator());
@@ -22,6 +22,15 @@ public abstract class Message {
                 String username = info[0], password = info[1];
 
                 yield new LoginMessage(username, password);
+            }
+            case AUTH_REGISTER -> {
+                var payload = parts[1];
+
+                var info = payload.split(Message.payloadDataSeparator());
+
+                String username = info[0], password = info[1];
+
+                yield new RegisterMessage(username, password);
             }
             case ACK -> new AckMessage();
             case NACK -> new NackMessage();

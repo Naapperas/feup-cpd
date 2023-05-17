@@ -1,4 +1,4 @@
-package pt.up.fe.cpd2223.model;
+package pt.up.fe.cpd2223.common.model;
 
 public record User(long id, String username, String password, long elo) {
     public User {
@@ -13,5 +13,9 @@ public record User(long id, String username, String password, long elo) {
         if (elo < 0) {
             throw new IllegalArgumentException("Elo cannot be negative");
         }
+    }
+
+    public String toString() {
+        return "%d:%s:%s:%d".formatted(id, username, password, elo);
     }
 }

@@ -5,10 +5,8 @@ import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.decoding.UTF8Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
 import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
-import pt.up.fe.cpd2223.common.message.AckMessage;
-import pt.up.fe.cpd2223.common.message.LoginMessage;
-import pt.up.fe.cpd2223.common.message.Message;
-import pt.up.fe.cpd2223.common.message.NackMessage;
+import pt.up.fe.cpd2223.common.message.*;
+import pt.up.fe.cpd2223.server.service.AuthService;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -21,7 +19,7 @@ import java.util.concurrent.Executors;
 
 public class Server implements Main.Application {
 
-    private final ExecutorService threadPool;
+    private final ExecutorService executor;
     private final int port;
 
     private final Decoder messageDecoder;
@@ -32,7 +30,7 @@ public class Server implements Main.Application {
     private boolean accepting = true; // TODO: figure out when to change this
 
     private Server(int port, int macConcurrentGames) {
-        this.threadPool = Executors.newFixedThreadPool(macConcurrentGames);
+        this.executor = Executors.newFixedThreadPool(macConcurrentGames);
         this.port = port;
         this.messageDecoder = new UTF8Decoder();
         this.messageEncoder = new UTF8Encoder();
@@ -67,7 +65,7 @@ public class Server implements Main.Application {
     @Override
     public void run() {
 
-        this.threadPool.submit(this::processMessages);
+        this.executor.submit(this::processMessages);
 
         System.out.printf("Starting server on port %d%n", this.port);
 
@@ -128,7 +126,6 @@ public class Server implements Main.Application {
             try {
                 switch (message.type()) {
                     case AUTH_LOGIN -> {
-
                         var loginMessage = (LoginMessage) message;
 
                         channel = loginMessage.getClientSocket();
@@ -136,9 +133,29 @@ public class Server implements Main.Application {
 
                         String username = parts[0], password = parts[1];
 
-                        Message msg;
+                        var user = AuthService.login(username, password);
 
-                        if (username.equals("test") && password.equals("test")) {
+                        Message msg;
+                        if (user != null) {
+                            msg = new AckMessage();
+                        } else {
+                            msg = new NackMessage();
+                        }
+
+                        channel.write(this.messageEncoder.encode(msg.toFormattedString()));
+                    }
+                    case AUTH_REGISTER -> {
+                        var registerMessage = (RegisterMessage) message;
+
+                        channel = registerMessage.getClientSocket();
+                        var parts = registerMessage.payload().split(Message.payloadDataSeparator());
+
+                        String username = parts[0], password = parts[1];
+
+                        var user = AuthService.register(username, password);
+
+                        Message msg;
+                        if (user != null) {
                             msg = new AckMessage();
                         } else {
                             msg = new NackMessage();
@@ -155,6 +172,7 @@ public class Server implements Main.Application {
                 if (channel != null) {
                     try {
                         channel.close();
+                        return;
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
