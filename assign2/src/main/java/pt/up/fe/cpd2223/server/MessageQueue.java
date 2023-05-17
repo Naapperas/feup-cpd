@@ -18,11 +18,11 @@ public class MessageQueue {
         return this.messageQueue.offer(m);
     }
 
-    public synchronized Message pollMessage() {
+    public synchronized Message pollMessage(long timeout) {
 
         if (this.messageQueue.size() == 0) {
             try {
-                this.wait();
+                this.wait(timeout);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

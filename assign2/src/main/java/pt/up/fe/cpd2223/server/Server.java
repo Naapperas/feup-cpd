@@ -6,6 +6,7 @@ import pt.up.fe.cpd2223.common.decoding.UTF8Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
 import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
 import pt.up.fe.cpd2223.common.message.*;
+import pt.up.fe.cpd2223.common.socket.SocketIO;
 import pt.up.fe.cpd2223.server.service.AuthService;
 
 import java.io.IOException;
@@ -111,9 +112,9 @@ public class Server implements Main.Application {
     }
 
     public void processMessages() {
-        System.out.println("Message Processing Thread started");
-        while (true) {
-            var message = this.messageQueue.pollMessage();
+        System.out.println("Server Message Processing Thread started");
+        while (this.accepting) {
+            var message = this.messageQueue.pollMessage(200);
 
             // make this blocking
             if (message == null) continue;
@@ -128,7 +129,6 @@ public class Server implements Main.Application {
                     case AUTH_LOGIN -> {
                         var loginMessage = (LoginMessage) message;
 
-                        channel = loginMessage.getClientSocket();
                         var parts = loginMessage.payload().split(Message.payloadDataSeparator());
 
                         String username = parts[0], password = parts[1];
@@ -142,12 +142,13 @@ public class Server implements Main.Application {
                             msg = new NackMessage();
                         }
 
-                        channel.write(this.messageEncoder.encode(msg.toFormattedString()));
+                        channel = loginMessage.getClientSocket();
+
+                        SocketIO.write(channel, this.messageEncoder.encode(msg.toFormattedString()));
                     }
                     case AUTH_REGISTER -> {
                         var registerMessage = (RegisterMessage) message;
 
-                        channel = registerMessage.getClientSocket();
                         var parts = registerMessage.payload().split(Message.payloadDataSeparator());
 
                         String username = parts[0], password = parts[1];
@@ -161,7 +162,9 @@ public class Server implements Main.Application {
                             msg = new NackMessage();
                         }
 
-                        channel.write(this.messageEncoder.encode(msg.toFormattedString()));
+                        channel = registerMessage.getClientSocket();
+
+                        SocketIO.write(channel, this.messageEncoder.encode(msg.toFormattedString()));
                     }
                     default -> {
                     }
@@ -187,25 +190,6 @@ public class Server implements Main.Application {
     public void processReceivedData(SelectionKey key) throws IOException { // pass in the key to give us more control
         var clientChannel = (SocketChannel) key.channel();
 
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-
-        int bytesRead = clientChannel.read(buffer);
-        if (bytesRead == -1) { // Peer closed socket
-            System.out.println("Peer closed their socket endpoint, closing ours.");
-            clientChannel.close();
-            return;
-        }
-        buffer.flip();
-
-        var stringData = this.messageDecoder.decode(buffer);
-
-        // TODO: what about partial reads ?
-        var messages = stringData.split("\n");
-
-        for (var message : messages) {
-            Message msg = Message.fromFormattedString(message);
-
-            this.messageQueue.enqueueMessage(msg.withChannel(clientChannel));
-        }
+        MessageReader.readMessageToQueue(clientChannel, this.messageDecoder, this.messageQueue);
     }
 }

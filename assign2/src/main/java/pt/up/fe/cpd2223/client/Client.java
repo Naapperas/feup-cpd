@@ -1,39 +1,47 @@
 package pt.up.fe.cpd2223.client;
 
 import pt.up.fe.cpd2223.Main;
+import pt.up.fe.cpd2223.client.state.LoginState;
+import pt.up.fe.cpd2223.client.state.RegisterState;
+import pt.up.fe.cpd2223.client.state.State;
 import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.decoding.UTF8Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
 import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
-import pt.up.fe.cpd2223.common.message.LoginMessage;
-import pt.up.fe.cpd2223.common.message.Message;
-import pt.up.fe.cpd2223.common.message.MessageType;
-import pt.up.fe.cpd2223.common.message.RegisterMessage;
+import pt.up.fe.cpd2223.common.message.*;
+import pt.up.fe.cpd2223.server.MessageQueue;
+import pt.up.fe.cpd2223.server.service.AuthService;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Client implements Main.Application {
 
-    private SocketChannel channel;
-
     private final String host;
     private final int port;
-
     private final Scanner sc = new Scanner(System.in);
-
     private final Encoder messageEncoder;
     private final Decoder messageDecoder;
+    private final MessageQueue messageQueue;
+    private SocketChannel channel;
+
+    private boolean stopListening = false;
+
+    private State state;
 
     private Client(String host, int port) {
         this.host = host;
         this.port = port;
         this.messageEncoder = new UTF8Encoder();
         this.messageDecoder = new UTF8Decoder();
+        this.messageQueue = new MessageQueue();
+
     }
 
     public static Client create(String[] args) {
@@ -58,58 +66,83 @@ public class Client implements Main.Application {
         }
     }
 
-    public boolean handleLogin(SocketChannel channel) throws IOException {
-        System.out.print("Username: ");
-        String username = sc.next();
-        System.out.print("Password: ");
-        String password = sc.next();
+    public void processMessages() {
+        System.out.println("Client Message Processing Thread started");
+        while (!this.stopListening) {
+            var message = this.messageQueue.pollMessage(200);
 
-        var authMessage = new RegisterMessage(username, password);
+            // make this blocking
+            if (message == null) continue;
 
-        System.out.println(authMessage.toFormattedString());
+            this.state = this.state.handle(message);
 
-        channel.write(this.messageEncoder.encode(authMessage.toFormattedString()));
+            if (this.state == null)  {
+                try {
+                    message.getClientSocket().close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                this.stopListening = true;
+            }
+        }
 
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        channel.read(buffer);
-        buffer.flip();
+        System.out.println("Exiting client message handling thread");
+    }
 
-        // handle auth response
+    public State handleAuth() throws IOException {
 
-        var bufferContent = this.messageDecoder.decode(buffer);
+        Scanner sc = new Scanner(System.in);
 
-        var msg = Message.fromFormattedString(bufferContent.split(Message.messageDelimiter())[0]);
+        System.out.println("""
+                1. Login
+                2. Register
+                0. Quit
+                """);
 
-        return msg.type() == MessageType.ACK;
+        while (true) {
+            System.out.print("Option: ");
+
+            int option = sc.nextInt();
+
+            switch (option) {
+                case 0 -> {
+                    this.channel.close();
+                    return null;
+                }
+                case 1 -> {
+                    return new LoginState(this.messageEncoder, this.messageDecoder);
+                }
+                case 2 -> {
+                    return new RegisterState(this.messageEncoder, this.messageDecoder);
+                }
+                default -> System.out.printf("Unknown option selected: %d, please select a valid option%n", option);
+            };
+        }
     }
 
     @Override
     public void run() {
 
-        try (SocketChannel channel = SocketChannel.open(new InetSocketAddress(this.host, this.port))) {
+        var messageThread = new Thread(this::processMessages);
+        messageThread.setDaemon(true);
+        messageThread.start();
 
+        try (SocketChannel channel = SocketChannel.open(new InetSocketAddress(this.host, this.port))) {
             // at this point we are connected
             this.channel = channel;
 
-            boolean authenticated = false;
-            final byte maxRetries = 3;
-            byte retries = maxRetries;
+            this.state = this.handleAuth();
 
-            while (retries-- > 0) {
+            // early termination
+            if (this.state == null) return;
 
-                authenticated = this.handleLogin(channel);
+            // we guarantee that the state received here can handle this message as an authentication process
+            this.state = this.state.handle(new UnknownMessage().withChannel(channel));
 
-                if (authenticated) break;
-                else {
-                    System.out.printf("Failed to authenticate user, %d retries left%n", retries);
-                }
+            while (channel.isConnected()) {
+                MessageReader.readMessageToQueue(channel, this.messageDecoder, this.messageQueue);
             }
 
-            if (!authenticated) {
-                System.out.printf("User inserted bad credentials %d times, abort%n", maxRetries);
-            } else {
-                System.out.println("Authenticated");
-            }
         } catch (UnresolvedAddressException e) {
             System.err.printf("Failed to connect to server at %s:%d%n", this.host, this.port);
         } catch (Exception e) {
