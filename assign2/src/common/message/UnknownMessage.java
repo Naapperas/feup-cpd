@@ -1,9 +1,9 @@
 package common.message;
 
-public class NackMessage extends Message {
+public class UnknownMessage extends Message {
     @Override
     public MessageType type() {
-        return MessageType.NACK;
+        return MessageType.UNKNOWN;
     }
 
     @Override

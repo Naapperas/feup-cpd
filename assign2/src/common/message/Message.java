@@ -1,17 +1,12 @@
 package common.message;
 
-import common.decoding.Decoder;
-import common.encoding.Encoder;
+import java.nio.channels.SocketChannel;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
+public abstract class Message {
 
-public interface Message {
+    private SocketChannel socket;
 
-    static Message fromBytes(ByteBuffer buffer, Decoder decoder) {
-
-        String message = decoder.decode(buffer);
-
+    public static Message fromFormattedString(String message) {
         String[] parts = message.split(":");
 
         int type = Integer.parseInt(parts[0]);
@@ -28,21 +23,34 @@ public interface Message {
 
                 yield new LoginMessage(username, password);
             }
-            default -> throw new UnsupportedOperationException("Undefined behavior");
+            case ACK -> new AckMessage();
+            case NACK -> new NackMessage();
+            default -> new UnknownMessage();
         };
     }
 
-    static String payloadDataSeparator() {
+    public static String payloadDataSeparator() {
         return ";";
     }
 
-    MessageType type();
+    public static String messageDelimiter() {
+        return "\n";
+    }
 
-    String payload();
+    public Message withChannel(SocketChannel channel) {
+        this.socket = channel;
+        return this;
+    }
 
-    default ByteBuffer toBytes(Encoder encoder) throws IOException {
-        String formattedMessage = "%d:%s\n".formatted(this.type().getIdentifier(), this.payload());
+    public SocketChannel getClientSocket() {
+        return this.socket;
+    }
 
-        return encoder.encode(formattedMessage);
+    public abstract MessageType type();
+
+    public abstract String payload();
+
+    public String toFormattedString() {
+        return "%d:%s%s".formatted(this.type().getIdentifier(), this.payload(), Message.messageDelimiter());
     }
 }

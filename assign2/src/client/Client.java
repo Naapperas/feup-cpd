@@ -1,12 +1,17 @@
 package client;
 
 import app.Main;
+import common.decoding.Decoder;
+import common.decoding.UTF8Decoder;
 import common.encoding.Encoder;
 import common.encoding.UTF8Encoder;
 import common.message.LoginMessage;
+import common.message.Message;
+import common.message.MessageType;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.Scanner;
@@ -18,12 +23,16 @@ public class Client implements Main.Application {
     private String host;
     private int port;
 
-    private Encoder byteEncoder;
+    private final Scanner sc = new Scanner(System.in);
+
+    private final Encoder messageEncoder;
+    private final Decoder messageDecoder;
 
     private Client(String host, int port) {
         this.host = host;
         this.port = port;
-        this.byteEncoder = new UTF8Encoder();
+        this.messageEncoder = new UTF8Encoder();
+        this.messageDecoder = new UTF8Decoder();
     }
 
     public static Client create(String[] args) {
@@ -49,20 +58,26 @@ public class Client implements Main.Application {
     }
 
     public boolean handleAuth(SocketChannel channel) throws IOException {
-        Scanner sc = new Scanner(System.in);
         System.out.print("Username: ");
         String username = sc.next();
         System.out.print("Password: ");
         String password = sc.next();
-        sc.close();
 
         var authMessage = new LoginMessage(username, password);
 
-        channel.write(authMessage.toBytes(this.byteEncoder));
+        channel.write(this.messageEncoder.encode(authMessage.toFormattedString()));
+
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        channel.read(buffer);
+        buffer.flip();
 
         // handle auth response
 
-        return true;
+        var bufferContent = this.messageDecoder.decode(buffer);
+
+        var msg = Message.fromFormattedString(bufferContent.split(Message.messageDelimiter())[0]);
+
+        return msg.type() == MessageType.ACK;
     }
 
     @Override
@@ -83,14 +98,14 @@ public class Client implements Main.Application {
 
                 if (authenticated) break;
                 else {
-                    System.out.printf("Failed to authenticate user, %d retries left%n", maxRetries);
+                    System.out.printf("Failed to authenticate user, %d retries left%n", retries);
                 }
             }
 
             if (!authenticated) {
-                System.out.println("User inserted bad credentials 3 times, abort");
+                System.out.printf("User inserted bad credentials %d times, abort%n", maxRetries);
             } else {
-
+                System.out.println("Authenticated");
             }
         } catch (UnresolvedAddressException e) {
             System.err.printf("Failed to connect to server at %s:%d%n", this.host, this.port);

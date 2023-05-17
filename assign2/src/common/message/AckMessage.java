@@ -1,6 +1,6 @@
 package common.message;
 
-public class AckMessage implements Message {
+public class AckMessage extends Message {
     @Override
     public MessageType type() {
         return MessageType.ACK;

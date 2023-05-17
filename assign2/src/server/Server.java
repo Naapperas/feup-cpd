@@ -1,34 +1,40 @@
 package server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import app.Main;
 import common.decoding.Decoder;
 import common.decoding.UTF8Decoder;
+import common.encoding.Encoder;
+import common.encoding.UTF8Encoder;
+import common.message.AckMessage;
+import common.message.LoginMessage;
 import common.message.Message;
+import common.message.NackMessage;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server implements Main.Application {
 
     private final ExecutorService threadPool;
-
-    private Selector channelSelector;
-
     private final int port;
-    private boolean accepting = true; // TODO: figure out when to change this
 
-    private final Decoder stringDecoder;
+    private final Decoder messageDecoder;
+    private final Encoder messageEncoder;
+
+    private final MessageQueue messageQueue;
+    private Selector channelSelector;
+    private boolean accepting = true; // TODO: figure out when to change this
 
     private Server(int port, int macConcurrentGames) {
         this.threadPool = Executors.newFixedThreadPool(macConcurrentGames);
         this.port = port;
-        this.stringDecoder = new UTF8Decoder();
+        this.messageDecoder = new UTF8Decoder();
+        this.messageEncoder = new UTF8Encoder();
+        this.messageQueue = new MessageQueue();
     }
 
     public static Server configure(String[] args) {
@@ -58,6 +64,8 @@ public class Server implements Main.Application {
 
     @Override
     public void run() {
+
+        this.threadPool.submit(this::processMessages);
 
         System.out.printf("Starting server on port %d%n", this.port);
 
@@ -92,9 +100,6 @@ public class Server implements Main.Application {
 
                         // no need to do any more processing, any further communication is handled by the next "else if" clause
                     } else if (key.isReadable()) { // received data on this selector
-
-                        // TODO: bruh
-
                         this.processReceivedData(key);
                     }
                 }
@@ -105,8 +110,58 @@ public class Server implements Main.Application {
         }
     }
 
-    public void handleMessage(Message message) {
-        System.out.println(message.payload());
+    public void processMessages() {
+        System.out.println("Message Processing Thread started");
+        while (true) {
+            var message = this.messageQueue.pollMessage();
+
+            // make this blocking
+            if (message == null) continue;
+
+            // in case the message carries a channel;
+            SocketChannel channel = null;
+
+            System.out.printf("Got message %s%n", message.type().name());
+
+            try {
+                switch (message.type()) {
+                    case AUTH_LOGIN -> {
+
+                        var loginMessage = (LoginMessage) message;
+
+                        channel = loginMessage.getClientSocket();
+                        var parts = loginMessage.payload().split(Message.payloadDataSeparator());
+
+                        String username = parts[0], password = parts[1];
+
+                        Message msg;
+
+                        if (username.equals("test") && password.equals("test")) {
+                            msg = new AckMessage();
+                        } else {
+                            msg = new NackMessage();
+                        }
+
+                        channel.write(this.messageEncoder.encode(msg.toFormattedString()));
+                    }
+                    default -> {
+                    }
+                }
+            } catch (ClosedChannelException cce) {
+
+                // the channel was closed before we could send a message, nothing we can do with it anymore
+                if (channel != null) {
+                    try {
+                        channel.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void processReceivedData(SelectionKey key) throws IOException { // pass in the key to give us more control
@@ -122,8 +177,15 @@ public class Server implements Main.Application {
         }
         buffer.flip();
 
-        Message msg = Message.fromBytes(buffer, stringDecoder);
+        var stringData = this.messageDecoder.decode(buffer);
 
-        handleMessage(msg);
+        // TODO: what about partial reads ?
+        var messages = stringData.split("\n");
+
+        for (var message : messages) {
+            Message msg = Message.fromFormattedString(message);
+
+            this.messageQueue.enqueueMessage(msg.withChannel(clientChannel));
+        }
     }
 }

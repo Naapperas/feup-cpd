@@ -1,9 +1,6 @@
 package common.message;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-public abstract class AuthMessage implements Message {
+public abstract class AuthMessage extends Message {
 
     private final String username;
     private final String password;
