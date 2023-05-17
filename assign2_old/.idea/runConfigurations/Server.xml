@@ -1,9 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Server" type="Application" factoryName="Application">
-    <option name="ALTERNATIVE_JRE_PATH" value="corretto-19" />
-    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-    <option name="MAIN_CLASS_NAME" value="pt.up.fe.cpd2223.Main" />
-    <module name="t07g15.main" />
+    <option name="MAIN_CLASS_NAME" value="app.Main" />
+    <module name="CPD_ClSrv_Proj" />
     <option name="PROGRAM_PARAMETERS" value="server 8088 5" />
     <method v="2">
       <option name="Make" enabled="true" />
