@@ -1,13 +1,15 @@
 package client;
 
+import app.Main;
 import common.encoding.Encoder;
 import common.encoding.UTF8Encoder;
+import common.message.LoginMessage;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
-import app.Main;
+import java.util.Scanner;
 
 public class Client implements Main.Application {
 
@@ -46,18 +48,50 @@ public class Client implements Main.Application {
         }
     }
 
+    public boolean handleAuth(SocketChannel channel) throws IOException {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Username: ");
+        String username = sc.next();
+        System.out.print("Password: ");
+        String password = sc.next();
+        sc.close();
+
+        var authMessage = new LoginMessage(username, password);
+
+        channel.write(authMessage.toBytes(this.byteEncoder));
+
+        // handle auth response
+
+        return true;
+    }
+
     @Override
     public void run() {
 
         try (SocketChannel channel = SocketChannel.open(new InetSocketAddress(this.host, this.port))) {
 
+            // at this point we are connected
             this.channel = channel;
 
-            ByteBuffer buffer = this.byteEncoder.encode("Hello world");
+            boolean authenticated = false;
+            final byte maxRetries = 3;
+            byte retries = maxRetries;
 
-            while (buffer.hasRemaining())
-                this.channel.write(buffer);
+            while (retries-- > 0) {
 
+                authenticated = this.handleAuth(channel);
+
+                if (authenticated) break;
+                else {
+                    System.out.printf("Failed to authenticate user, %d retries left%n", maxRetries);
+                }
+            }
+
+            if (!authenticated) {
+                System.out.println("User inserted bad credentials 3 times, abort");
+            } else {
+
+            }
         } catch (UnresolvedAddressException e) {
             System.err.printf("Failed to connect to server at %s:%d%n", this.host, this.port);
         } catch (Exception e) {

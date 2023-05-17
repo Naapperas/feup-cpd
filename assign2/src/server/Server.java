@@ -13,12 +13,12 @@ import java.util.concurrent.Executors;
 import app.Main;
 import common.decoding.Decoder;
 import common.decoding.UTF8Decoder;
+import common.message.Message;
 
 public class Server implements Main.Application {
 
     private final ExecutorService threadPool;
 
-    private ServerSocketChannel serverSocket;
     private Selector channelSelector;
 
     private final int port;
@@ -65,31 +65,27 @@ public class Server implements Main.Application {
         try (ServerSocketChannel serverSocket = ServerSocketChannel.open(); Selector selector = Selector.open()) {
 
             // since we use a try-with-resource, we guarantee that the server socket will be closed
-            this.serverSocket = serverSocket;
             this.channelSelector = selector;
 
-            this.serverSocket
+            serverSocket
                     .bind(new InetSocketAddress(this.port)) // bind to localhost:<PORT>
                     .configureBlocking(false) // make it non-blocking
                     .register(this.channelSelector, SelectionKey.OP_ACCEPT); // register a selector for accepting client connections
 
             while (this.accepting) {
-                // this.channelSelector.select();
-
-                int clientsReady = this.channelSelector.select();
-                if (clientsReady == 0) continue;
+                this.channelSelector.select();
 
                 var selectedKeys = selector.selectedKeys();
-                for (SelectionKey key : selectedKeys) {
+                for (var key : selectedKeys) {
 
                     // register the selector for clients reads, so we can process messages and accept clients in the same thread
                     if (key.isAcceptable()) { // received client connection
 
-                        var clientSocket = this.serverSocket.accept();
+                        var clientSocket = ((ServerSocketChannel) key.channel()).accept();
 
                         if (clientSocket == null) continue;
 
-                        System.out.println("Client received: " + clientSocket.toString());
+                        System.out.println("Client received: " + clientSocket);
 
                         clientSocket
                                 .configureBlocking(false)
@@ -98,9 +94,9 @@ public class Server implements Main.Application {
                         // no need to do any more processing, any further communication is handled by the next "else if" clause
                     } else if (key.isReadable()) { // received data on this selector
 
-                        System.out.println("Boas");
+                        // TODO: bruh
 
-                        this.handleMessage(key); // change to pass the key
+                        this.handleMessage(key);
                     }
                 }
                 selectedKeys.clear();
@@ -110,20 +106,21 @@ public class Server implements Main.Application {
         }
     }
 
-    int test = 5;
-
-    // pass in the key to give us more control
-    public void handleMessage(SelectionKey key) throws IOException {
+    public void handleMessage(SelectionKey key) throws IOException { // pass in the key to give us more control
         var clientChannel = (SocketChannel) key.channel();
 
         ByteBuffer buffer = ByteBuffer.allocate(1024);
 
-        clientChannel.read(buffer);
+        int bytesRead = clientChannel.read(buffer);
+        if (bytesRead == -1) { // Peer closed socket
+            System.out.println("Peer closed their socket endpoint, closing ours.");
+            clientChannel.close();
+            return;
+        }
         buffer.flip();
 
-        System.out.println(this.stringDecoder.decode(buffer));
+        Message msg = Message.fromBytes(buffer, stringDecoder);
 
-        if (test-- == 0)
-            System.exit(1);
+        System.out.println(this.stringDecoder.decode(buffer));
     }
 }
