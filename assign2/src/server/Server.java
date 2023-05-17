@@ -7,7 +7,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import app.Main;
@@ -96,7 +95,7 @@ public class Server implements Main.Application {
 
                         // TODO: bruh
 
-                        this.handleMessage(key);
+                        this.processReceivedData(key);
                     }
                 }
                 selectedKeys.clear();
@@ -106,7 +105,11 @@ public class Server implements Main.Application {
         }
     }
 
-    public void handleMessage(SelectionKey key) throws IOException { // pass in the key to give us more control
+    public void handleMessage(Message message) {
+        System.out.println(message.payload());
+    }
+
+    public void processReceivedData(SelectionKey key) throws IOException { // pass in the key to give us more control
         var clientChannel = (SocketChannel) key.channel();
 
         ByteBuffer buffer = ByteBuffer.allocate(1024);
@@ -121,6 +124,6 @@ public class Server implements Main.Application {
 
         Message msg = Message.fromBytes(buffer, stringDecoder);
 
-        System.out.println(this.stringDecoder.decode(buffer));
+        handleMessage(msg);
     }
 }

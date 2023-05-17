@@ -15,6 +15,6 @@ public abstract class AuthMessage implements Message {
 
     @Override
     public String payload(){
-        return "%s;%s".formatted(this.username, this.password);
+        return "%s%s%s".formatted(this.username, Message.payloadDataSeparator(), this.password);
     }
 }
