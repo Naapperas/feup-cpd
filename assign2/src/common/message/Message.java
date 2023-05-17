@@ -20,7 +20,7 @@ public interface Message {
 
     static Message fromBytes(ByteBuffer buffer, Decoder decoder) {
 
-        String message = buffer.toString();
+        String message = decoder.decode(buffer);
 
         int type = Integer.parseInt(message.split(":")[0]);
 
