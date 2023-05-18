@@ -6,6 +6,7 @@ import pt.up.fe.cpd2223.common.decoding.UTF8Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
 import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
 import pt.up.fe.cpd2223.common.message.*;
+import pt.up.fe.cpd2223.common.model.User;
 import pt.up.fe.cpd2223.common.socket.SocketIO;
 import pt.up.fe.cpd2223.game.Game;
 import pt.up.fe.cpd2223.server.repository.UserRepository;
@@ -18,8 +19,7 @@ import pt.up.fe.cpd2223.server.userQueue.UserQueue;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.*;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -38,6 +38,8 @@ public class Server implements Main.Application {
     private Selector channelSelector;
     private boolean accepting = true; // TODO: figure out when to change this
 
+    private final Map<Long, Game> userToGame;
+
     private Server(int port, int maxConcurrentGames, UserQueue queue) {
         this.executor = Executors.newFixedThreadPool(maxConcurrentGames);
         this.port = port;
@@ -49,6 +51,8 @@ public class Server implements Main.Application {
 
         this.userRepository = new UserRepository();
         this.authService = new AuthService(this.userRepository);
+
+        this.userToGame = new HashMap<>();
     }
 
     public static Server configure(String[] args) {
@@ -140,6 +144,8 @@ public class Server implements Main.Application {
             }
         } catch (IOException exception) {
             System.err.printf("Error occurred while serving clients: %s%n", exception.getMessage());
+        } finally {
+            this.executor.shutdown();
         }
     }
 
@@ -165,6 +171,8 @@ public class Server implements Main.Application {
             });
 
             var game = new Game(gameUsers, this.messageEncoder);
+
+            gameUsers.forEach((quser) -> this.userToGame.put(quser.user().id(), game));
 
             this.executor.submit(game::run);
         }
@@ -197,6 +205,7 @@ public class Server implements Main.Application {
                         Message msg;
                         if (user != null) {
                             msg = new AckMessage(Collections.singletonMap("id", user.id()));
+                            channel.keyFor(this.channelSelector).attach(user);
                         } else {
                             msg = new NackMessage();
                         }
@@ -215,6 +224,7 @@ public class Server implements Main.Application {
                         Message msg;
                         if (user != null) {
                             msg = new AckMessage(Collections.singletonMap("id", user.id()));
+                            channel.keyFor(this.channelSelector).attach(user);
                         } else {
                             msg = new NackMessage();
                         }
@@ -230,10 +240,22 @@ public class Server implements Main.Application {
 
                         var user = this.userRepository.findById(userId);
 
-                        System.out.printf("Enqueueing user with id %d%n", user.id());
+                        if (this.userQueue.addPlayer(new QueueUser(user, channel, new Date(), null)))
+                            // add the user to a queue along with its channel
+                            System.out.printf("Enqueueing user with id %d%n", user.id());
 
-                        // add the user to a queue along with its channel
-                        this.userQueue.addUser(new QueueUser(user, channel));
+                    }
+                    case USER_DISCONNECTED -> {
+
+//                        var user = (User) channel.keyFor(this.channelSelector).attachment();
+//
+//                        if (user != null) {
+//                            var queuedUser = this.userQueue.getForId(user.id());
+//
+//                            var newQueuedUser = new QueueUser(queuedUser.user(), queuedUser.channel(), queuedUser.instantJoined(), new Date());
+//
+//                            this.userQueue.addPlayer(newQueuedUser);
+//                        }
                     }
                     default -> {
                     }
@@ -257,6 +279,6 @@ public class Server implements Main.Application {
     private void processReceivedData(SelectionKey key) throws IOException { // pass in the key to give us more control
         var clientChannel = (SocketChannel) key.channel();
 
-        MessageReader.readMessageToQueue(clientChannel, this.messageDecoder, this.messageQueue);
+        MessageHandler.readMessageToQueue(clientChannel, this.messageDecoder, this.messageQueue);
     }
 }

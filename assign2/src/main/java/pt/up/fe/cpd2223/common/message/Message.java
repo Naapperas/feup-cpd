@@ -62,6 +62,7 @@ public abstract class Message {
 
                 yield new GameJoinedMessage();
             }
+            case USER_DISCONNECTED -> new UserDisconnectMessage();
             default -> new UnknownMessage();
         };
     }
@@ -90,6 +91,6 @@ public abstract class Message {
     public abstract String payload();
 
     public String toFormattedString() {
-        return "%d:%s%s".formatted(this.type().getIdentifier(), this.payload(), Message.messageDelimiter());
+        return "%d%s%s%s".formatted(this.type().getIdentifier(), Message.metadataSeparator(), this.payload(), Message.messageDelimiter());
     }
 }

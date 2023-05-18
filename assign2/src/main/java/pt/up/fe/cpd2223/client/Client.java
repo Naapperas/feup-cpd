@@ -8,7 +8,7 @@ import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.decoding.UTF8Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
 import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
-import pt.up.fe.cpd2223.common.message.MessageReader;
+import pt.up.fe.cpd2223.common.message.MessageHandler;
 import pt.up.fe.cpd2223.common.message.UnknownMessage;
 import pt.up.fe.cpd2223.server.MessageQueue;
 
@@ -139,7 +139,7 @@ public class Client implements Main.Application {
 
             while (channel.isConnected()) {
                 try {
-                    MessageReader.readMessageToQueue(channel, this.messageDecoder, this.messageQueue);
+                    MessageHandler.readMessageToQueue(channel, this.messageDecoder, this.messageQueue);
                 } catch (AsynchronousCloseException ignored) {
                 }
             }

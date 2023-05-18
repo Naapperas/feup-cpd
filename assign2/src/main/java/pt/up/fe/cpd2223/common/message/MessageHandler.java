@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public class MessageReader {
+public class MessageHandler {
 
     public static void readMessageToQueue(SocketChannel channel, Decoder messageDecoder, MessageQueue messageQueue) throws IOException {
 
@@ -17,6 +17,11 @@ public class MessageReader {
         int bytesRead = SocketIO.read(channel, buffer);
 
         if (bytesRead <= 0) {
+
+            if (bytesRead == -1) {
+                messageQueue.enqueueMessage(new UserDisconnectMessage().withChannel(channel));
+            }
+
             // if the number of bytes read is -1, the channel has already been closed. Either way, wr can just return
             return;
         }

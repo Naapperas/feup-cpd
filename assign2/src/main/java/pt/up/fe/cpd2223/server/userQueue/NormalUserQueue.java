@@ -1,15 +1,11 @@
 package pt.up.fe.cpd2223.server.userQueue;
 
-import java.util.*;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.OptionalInt;
 import java.util.stream.IntStream;
 
 public class NormalUserQueue extends AbstractUserQueue {
-
-    private final Lock lock = new ReentrantLock();
-    private final Condition condition = this.lock.newCondition();
 
     private final LinkedList<QueueUser> users; // TODO: should this be a queue?
 
@@ -19,15 +15,14 @@ public class NormalUserQueue extends AbstractUserQueue {
     }
 
     @Override
-    public boolean addUser(QueueUser user) {
-
+    public boolean addPlayer(QueueUser player) {
         try {
             this.lock.lock();
 
             boolean userAppended = false;
 
             OptionalInt userPositionInQueueOpt = IntStream.range(0, users.size())
-                    .filter(i -> users.get(i).user().id() == user.user().id())
+                    .filter(i -> users.get(i).user().id() == player.user().id())
                     .findFirst();
 
             if (userPositionInQueueOpt.isPresent()) {
@@ -35,11 +30,9 @@ public class NormalUserQueue extends AbstractUserQueue {
 
                 int userPosition = userPositionInQueueOpt.getAsInt();
 
-                this.users.add(userPosition, user);
-                this.users.remove(userPosition  + 1);
-
+                this.users.set(userPosition, player);
             } else {
-                userAppended = this.users.offer(user);
+                userAppended = this.users.offer(player);
             }
 
             if (this.users.size() >= this.gameGroupSize) this.condition.signal();
@@ -59,9 +52,9 @@ public class NormalUserQueue extends AbstractUserQueue {
                 this.condition.await();
             }
 
-            var selectedUsers = this.users.stream().limit(this.gameGroupSize).toList();
+            var selectedUsers = this.users.stream().filter((queueUser -> queueUser.channel().isConnected())).limit(this.gameGroupSize).toList();
 
-            if (selectedUsers.stream().anyMatch((quser) -> !quser.channel().isConnected())) return null;
+            if (selectedUsers.size() < this.gameGroupSize) return null;
 
             this.users.removeAll(selectedUsers);
 
@@ -71,5 +64,10 @@ public class NormalUserQueue extends AbstractUserQueue {
         } finally {
             this.lock.unlock();
         }
+    }
+
+    @Override
+    public QueueUser getForId(long userId) {
+        return this.users.stream().filter((queueUser -> queueUser.user().id() == userId)).findFirst().orElse(null);
     }
 }

@@ -4,8 +4,10 @@ import java.util.List;
 
 public interface UserQueue {
 
-    boolean addUser(QueueUser user);
+    boolean addPlayer(QueueUser user);
 
     List<QueueUser> nextUserGroup();
+
+    QueueUser getForId(long userId);
 
 }
