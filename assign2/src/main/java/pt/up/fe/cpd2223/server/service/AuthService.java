@@ -5,10 +5,14 @@ import pt.up.fe.cpd2223.server.repository.UserRepository;
 
 public final class AuthService {
 
-    private static final UserRepository userRepository = new UserRepository();
+    private final UserRepository userRepository;
 
-    public static User login(String username, String password) {
-        var user = userRepository.findByUsername(username);
+    public AuthService(UserRepository repository) {
+        this.userRepository = repository;
+    }
+
+    public User login(String username, String password) {
+        var user = this.userRepository.findByUsername(username);
 
         if (user == null)
             return null;
@@ -19,20 +23,19 @@ public final class AuthService {
         return user;
     }
 
-    public static User register(String username, String password) {
+    public User register(String username, String password) {
 
-        var user = userRepository.findByUsername(username);
+        var user = this.userRepository.findByUsername(username);
 
         if (user != null)
             return null;
 
-        var id = userRepository.nextUserId();
+        var id = this.userRepository.nextUserId();
 
         user = new User(id, username, password, 1000);
 
-        userRepository.getUsers().add(user);
-
-        userRepository.saveUsers();
+        this.userRepository.getUsers().add(user);
+        this.userRepository.saveUsers();
 
         return user;
     }

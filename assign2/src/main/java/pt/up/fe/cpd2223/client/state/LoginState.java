@@ -2,9 +2,7 @@ package pt.up.fe.cpd2223.client.state;
 
 import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
-import pt.up.fe.cpd2223.common.message.LoginMessage;
-import pt.up.fe.cpd2223.common.message.Message;
-import pt.up.fe.cpd2223.common.message.MessageType;
+import pt.up.fe.cpd2223.common.message.*;
 import pt.up.fe.cpd2223.common.socket.SocketIO;
 
 import java.io.IOException;
@@ -26,12 +24,7 @@ public class LoginState extends State {
 
         if (this.retries == 0) {
             System.err.printf("Failed to authenticate user after %d retries, closing server connection%n", MAX_RETRIES);
-            try {
-                clientChannel.close();
-                return null;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            return null;
         }
 
         return switch (message.type()) {
@@ -61,7 +54,21 @@ public class LoginState extends State {
 
                 yield this;
             }
-            case ACK -> new QueueState(this.encoder, this.decoder);
+            case ACK -> {
+                var ackMsg = (AckMessage) message;
+
+                long userId = Long.parseLong((String) ackMsg.data().get("id"));
+
+                var msg = new EnqueueUserMessage(userId);
+
+                try {
+                    SocketIO.write(clientChannel, this.encoder.encode(msg.toFormattedString()));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                yield new QueueState(this.encoder, this.decoder, userId);
+            }
             default -> null;
         };
     }

@@ -4,7 +4,7 @@
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="pt.up.fe.cpd2223.Main" />
     <module name="t07g15.main" />
-    <option name="PROGRAM_PARAMETERS" value="server 8088 5" />
+    <option name="PROGRAM_PARAMETERS" value="server 8088 5 2 normal" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

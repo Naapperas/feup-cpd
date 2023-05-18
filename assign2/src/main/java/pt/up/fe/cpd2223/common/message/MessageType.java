@@ -6,6 +6,7 @@ public enum MessageType {
     AUTH_REGISTER(2),
     ACK(3),
     NACK(4),
+    ENQUEUE_USER(5),
     UNKNOWN(Integer.MAX_VALUE)
     ;
 
@@ -25,6 +26,7 @@ public enum MessageType {
             case 2 -> MessageType.AUTH_REGISTER;
             case 3 -> MessageType.ACK;
             case 4 -> MessageType.NACK;
+            case 5 -> MessageType.ENQUEUE_USER;
             default -> MessageType.UNKNOWN;
         };
     }

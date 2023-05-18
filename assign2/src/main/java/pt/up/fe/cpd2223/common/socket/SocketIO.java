@@ -1,14 +1,13 @@
 package pt.up.fe.cpd2223.common.socket;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
 public final class SocketIO {
 
     public static int write(SocketChannel channel, ByteBuffer buffer) {
-        int bytesWritten = 0;
+        int bytesWritten;
         try {
             bytesWritten = channel.write(buffer);
 

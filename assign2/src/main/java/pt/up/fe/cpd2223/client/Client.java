@@ -8,18 +8,16 @@ import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.decoding.UTF8Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
 import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
-import pt.up.fe.cpd2223.common.message.*;
+import pt.up.fe.cpd2223.common.message.MessageReader;
+import pt.up.fe.cpd2223.common.message.UnknownMessage;
 import pt.up.fe.cpd2223.server.MessageQueue;
-import pt.up.fe.cpd2223.server.service.AuthService;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.ClosedChannelException;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.Scanner;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class Client implements Main.Application {
 
@@ -67,7 +65,7 @@ public class Client implements Main.Application {
     }
 
     public void processMessages() {
-        System.out.println("Client Message Processing Thread started");
+        // System.out.println("Client Message Processing Thread started");
         while (!this.stopListening) {
             var message = this.messageQueue.pollMessage(200);
 
@@ -116,7 +114,7 @@ public class Client implements Main.Application {
                     return new RegisterState(this.messageEncoder, this.messageDecoder);
                 }
                 default -> System.out.printf("Unknown option selected: %d, please select a valid option%n", option);
-            };
+            }
         }
     }
 
@@ -140,9 +138,11 @@ public class Client implements Main.Application {
             this.state = this.state.handle(new UnknownMessage().withChannel(channel));
 
             while (channel.isConnected()) {
-                MessageReader.readMessageToQueue(channel, this.messageDecoder, this.messageQueue);
+                try {
+                    MessageReader.readMessageToQueue(channel, this.messageDecoder, this.messageQueue);
+                } catch (AsynchronousCloseException ignored) {
+                }
             }
-
         } catch (UnresolvedAddressException e) {
             System.err.printf("Failed to connect to server at %s:%d%n", this.host, this.port);
         } catch (Exception e) {

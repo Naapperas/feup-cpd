@@ -5,14 +5,14 @@ import pt.up.fe.cpd2223.common.model.User;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.locks.Lock;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
 
 public class UserRepository {
 
     private final Collection<User> users;
-
-    private Lock lock;
 
     public UserRepository() {
         this.users = loadUsers();
@@ -24,7 +24,7 @@ public class UserRepository {
 
     private Collection<User> loadUsers() {
 
-        try (var lines = Files.lines(Path.of("users.db"));) {
+        try (var lines = Files.lines(Path.of("users.db"))) {
             var users = new ArrayList<User>();
 
             for (Iterator<String> it = lines.iterator(); it.hasNext(); ) {
@@ -58,6 +58,10 @@ public class UserRepository {
 
     public User findByUsername(String username) {
         return this.getUsers().stream().filter(user -> user.username().equals(username)).findFirst().orElse(null);
+    }
+
+    public User findById(long userId) {
+        return this.getUsers().stream().filter(user -> user.id() == userId).findFirst().orElse(null);
     }
 
     public void saveUsers() {

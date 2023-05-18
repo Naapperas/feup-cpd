@@ -2,7 +2,7 @@ package pt.up.fe.cpd2223.client.state;
 
 import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
-import pt.up.fe.cpd2223.common.message.LoginMessage;
+import pt.up.fe.cpd2223.common.message.AckMessage;
 import pt.up.fe.cpd2223.common.message.Message;
 import pt.up.fe.cpd2223.common.message.MessageType;
 import pt.up.fe.cpd2223.common.message.RegisterMessage;
@@ -45,7 +45,13 @@ public class RegisterState extends State {
 
                 yield this;
             }
-            case ACK -> new QueueState(this.encoder, this.decoder);
+            case ACK -> {
+                var ackMsg = (AckMessage) message;
+
+                long userId = Long.parseLong((String) ackMsg.data().get("id"));
+
+                yield new QueueState(this.encoder, this.decoder, userId);
+            }
             default -> null;
         };
     }
