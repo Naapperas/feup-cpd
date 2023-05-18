@@ -7,6 +7,7 @@ public enum MessageType {
     ACK(3),
     NACK(4),
     ENQUEUE_USER(5),
+    GAME_JOINED(6),
     UNKNOWN(Integer.MAX_VALUE)
     ;
 
@@ -27,6 +28,7 @@ public enum MessageType {
             case 3 -> MessageType.ACK;
             case 4 -> MessageType.NACK;
             case 5 -> MessageType.ENQUEUE_USER;
+            case 6 -> MessageType.GAME_JOINED;
             default -> MessageType.UNKNOWN;
         };
     }

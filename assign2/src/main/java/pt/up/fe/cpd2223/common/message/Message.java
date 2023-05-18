@@ -58,6 +58,10 @@ public abstract class Message {
 
                 yield new EnqueueUserMessage(userId);
             }
+            case GAME_JOINED -> {
+
+                yield new GameJoinedMessage();
+            }
             default -> new UnknownMessage();
         };
     }

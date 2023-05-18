@@ -7,6 +7,7 @@ import pt.up.fe.cpd2223.common.encoding.Encoder;
 import pt.up.fe.cpd2223.common.encoding.UTF8Encoder;
 import pt.up.fe.cpd2223.common.message.*;
 import pt.up.fe.cpd2223.common.socket.SocketIO;
+import pt.up.fe.cpd2223.game.Game;
 import pt.up.fe.cpd2223.server.repository.UserRepository;
 import pt.up.fe.cpd2223.server.service.AuthService;
 import pt.up.fe.cpd2223.server.userQueue.NormalUserQueue;
@@ -143,12 +144,29 @@ public class Server implements Main.Application {
     }
 
     private void handleUserQueue() {
-
         while (true) {
             List<QueueUser> gameUsers = this.userQueue.nextUserGroup();
 
+            if (gameUsers == null) continue;
+
+            System.out.println("Lobby found");
             // TODO: instantiate Game
 
+            // need to unregister with the selector in order to change the blocking mode
+            gameUsers.forEach((quser) -> {
+                var userChannel = quser.channel();
+
+                userChannel.keyFor(this.channelSelector).cancel();
+                try {
+                    userChannel.configureBlocking(true);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            var game = new Game(gameUsers, this.messageEncoder);
+
+            this.executor.submit(game::run);
         }
     }
 

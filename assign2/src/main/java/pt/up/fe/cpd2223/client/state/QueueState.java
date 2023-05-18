@@ -2,11 +2,8 @@ package pt.up.fe.cpd2223.client.state;
 
 import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
-import pt.up.fe.cpd2223.common.message.EnqueueUserMessage;
+import pt.up.fe.cpd2223.common.message.GameJoinedMessage;
 import pt.up.fe.cpd2223.common.message.Message;
-import pt.up.fe.cpd2223.common.socket.SocketIO;
-
-import java.io.IOException;
 
 public class QueueState extends State {
 
@@ -22,14 +19,11 @@ public class QueueState extends State {
 
         var channel = message.getClientSocket();
 
-        var msg = new EnqueueUserMessage(userId);
-
-        try {
-            SocketIO.write(channel, this.encoder.encode(msg.toFormattedString()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (message instanceof GameJoinedMessage gameJoinedMessage) {
+            System.out.println("Joined game");
+            return new GameState(this.encoder, this.decoder);
+        } else {
+            return this;
         }
-
-        return this;
     }
 }
