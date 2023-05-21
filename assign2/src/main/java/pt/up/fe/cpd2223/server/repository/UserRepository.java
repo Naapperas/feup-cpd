@@ -64,6 +64,14 @@ public class UserRepository {
         return this.getUsers().stream().filter(user -> user.id() == userId).findFirst().orElse(null);
     }
 
+    public void update(User newUser) {
+        users.removeIf(user -> user.id() == newUser.id());
+        users.add(newUser);
+
+        // this is not ideal but time
+        this.saveUsers();
+    }
+
     public void saveUsers() {
         try {
             Files.write(Path.of("users.db"), this.getUsers().stream().map(User::toString).toList());

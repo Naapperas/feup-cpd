@@ -148,9 +148,24 @@ public class Game {
             if (this.game.checkForWin()) {
                 // the current player won
 
+                var expectedScoreA = 0;
+
+                for (var player : this.users) {
+                    if (player == currentPlayer) continue;
+
+                    expectedScoreA += Elo.expectedScore(currentPlayer.user().elo(), player.user().elo());
+
+                    var expectedScoreB = Elo.expectedScore(player.user().elo(), currentPlayer.user().elo());
+                    player.user().setElo((long) Elo.updateRating(player.user().elo(), expectedScoreB, 0));
+                }
+
+                currentPlayer.user().setElo((long) Elo.updateRating(currentPlayer.user().elo(), expectedScoreA, this.users.size() - 1));
+
                 this.broadcastMessage(new GameWonMessage(currentPlayer.user().id()));
             } else if (this.game.isBoardFull()) {
                 // draw
+
+
 
                 this.broadcastMessage(new GameDrawMessage());
             }

@@ -191,6 +191,8 @@ public class Server implements Main.Application {
 
                         System.out.printf("Re registering user with id %d%n", user.user().id());
 
+                        this.userRepository.update(user.user());
+
                         userChannel
                                 .configureBlocking(false)
                                 .register(this.channelSelector, SelectionKey.OP_READ); // register them back for reading
@@ -278,7 +280,7 @@ public class Server implements Main.Application {
 
                         if (this.userQueue.addPlayer(new QueueUser(user, channel, Instant.now(), null)))
                             // add the user to a queue along with its channel
-                            System.out.printf("Enqueueing user with id %d%n", user.id());
+                            System.out.printf("Enqueueing user with id %d and elo %d%n", user.id(), user.elo());
 
                     }
                     case USER_DISCONNECTED -> {

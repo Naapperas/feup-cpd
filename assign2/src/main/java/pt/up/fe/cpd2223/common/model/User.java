@@ -1,7 +1,11 @@
 package pt.up.fe.cpd2223.common.model;
 
-public record User(long id, String username, String password, long elo) {
-    public User {
+public class User {
+
+    private long userId, userElo;
+    private String userName, userPassword;
+
+    public User(long id, String username, String password, long elo) {
         if (username == null || username.isBlank()) {
             throw new IllegalArgumentException("Username cannot be null or blank");
         }
@@ -13,9 +17,33 @@ public record User(long id, String username, String password, long elo) {
         if (elo < 0) {
             throw new IllegalArgumentException("Elo cannot be negative");
         }
+
+        this.userId = id;
+        this.userElo = elo;
+        this.userName = username;
+        this.userPassword = password;
+    }
+
+    public long id() {
+        return this.userId;
+    }
+
+    public long elo() {
+        return userElo;
+    }
+    public void setElo(long newElo) {
+        this.userElo = newElo;
+    }
+
+    public String username() {
+        return this.userName;
+    }
+
+    public String password() {
+        return this.userPassword;
     }
 
     public String toString() {
-        return "%d:%s:%s:%d".formatted(id, username, password, elo);
+        return "%d:%s:%s:%d".formatted(userId, userName, userPassword, userElo);
     }
 }
