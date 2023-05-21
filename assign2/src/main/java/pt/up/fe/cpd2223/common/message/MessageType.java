@@ -9,6 +9,8 @@ public enum MessageType {
     ENQUEUE_USER(5),
     GAME_JOINED(6),
     USER_DISCONNECTED(7),
+    PLAYER_TO_MOVE(8),
+    MOVE(9),
     UNKNOWN(Integer.MAX_VALUE)
     ;
 
@@ -31,6 +33,8 @@ public enum MessageType {
             case 5 -> MessageType.ENQUEUE_USER;
             case 6 -> MessageType.GAME_JOINED;
             case 7 -> MessageType.USER_DISCONNECTED;
+            case 8 -> MessageType.PLAYER_TO_MOVE;
+            case 9 -> MessageType.MOVE;
             default -> MessageType.UNKNOWN;
         };
     }

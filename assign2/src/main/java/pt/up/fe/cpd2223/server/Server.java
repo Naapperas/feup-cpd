@@ -19,6 +19,7 @@ import pt.up.fe.cpd2223.server.userQueue.UserQueue;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,9 +37,10 @@ public class Server implements Main.Application {
     private final UserRepository userRepository;
     private final AuthService authService;
     private Selector channelSelector;
+    private Map<SocketChannel, User> connectedUsers; // ad-hoc solution to keep track of connected users
     private boolean accepting = true; // TODO: figure out when to change this
 
-    private final Map<Long, Game> userToGame;
+    private final Map<Long, Game> userToGame; // keep track of which game a user is in
 
     private Server(int port, int maxConcurrentGames, UserQueue queue) {
         this.executor = Executors.newFixedThreadPool(maxConcurrentGames);
@@ -53,6 +55,7 @@ public class Server implements Main.Application {
         this.authService = new AuthService(this.userRepository);
 
         this.userToGame = new HashMap<>();
+        this.connectedUsers = new HashMap<>();
     }
 
     public static Server configure(String[] args) {
@@ -170,11 +173,34 @@ public class Server implements Main.Application {
                 }
             });
 
-            var game = new Game(gameUsers, this.messageEncoder);
+            var game = new Game(gameUsers, this.messageEncoder, this.messageDecoder);
 
             gameUsers.forEach((quser) -> this.userToGame.put(quser.user().id(), game));
 
-            this.executor.submit(game::run);
+            this.executor.submit(() -> {
+                game.run();
+
+                System.out.println("Ran game");
+                // this.messageQueue.addMessage(new GameOverMessage(userChannel, game.getWinner().user().id()));
+
+                game.getUsers().forEach((user) -> {
+                    var userChannel = user.channel();
+
+                    try {
+                        userChannel
+                                .configureBlocking(false)
+                                .register(this.channelSelector, SelectionKey.OP_READ); // register them back for reading
+
+                        System.out.println("Enqueuing user");
+                        this.messageQueue.enqueueMessage(new EnqueueUserMessage(user.user().id()));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    // mark users as not being in a game
+                    this.userToGame.remove(user.user().id());
+                });
+            });
         }
     }
 
@@ -183,7 +209,7 @@ public class Server implements Main.Application {
         while (this.accepting) {
             var message = this.messageQueue.pollMessage(200);
 
-            // make this blocking
+            // TODO: make this blocking
             if (message == null) continue;
 
             // in case the message carries a channel;
@@ -196,9 +222,7 @@ public class Server implements Main.Application {
                     case AUTH_LOGIN -> {
                         var loginMessage = (LoginMessage) message;
 
-                        var parts = loginMessage.payload().split(Message.payloadDataSeparator());
-
-                        String username = parts[0], password = parts[1];
+                        String username = loginMessage.getUsername(), password = loginMessage.getPassword();
 
                         var user = this.authService.login(username, password);
 
@@ -206,6 +230,7 @@ public class Server implements Main.Application {
                         if (user != null) {
                             msg = new AckMessage(Collections.singletonMap("id", user.id()));
                             channel.keyFor(this.channelSelector).attach(user);
+                            this.connectedUsers.put(channel, user);
                         } else {
                             msg = new NackMessage();
                         }
@@ -215,9 +240,7 @@ public class Server implements Main.Application {
                     case AUTH_REGISTER -> {
                         var registerMessage = (RegisterMessage) message;
 
-                        var parts = registerMessage.payload().split(Message.payloadDataSeparator());
-
-                        String username = parts[0], password = parts[1];
+                        String username = registerMessage.getUsername(), password = registerMessage.getPassword();
 
                         var user = this.authService.register(username, password);
 
@@ -225,6 +248,7 @@ public class Server implements Main.Application {
                         if (user != null) {
                             msg = new AckMessage(Collections.singletonMap("id", user.id()));
                             channel.keyFor(this.channelSelector).attach(user);
+                            this.connectedUsers.put(channel, user);
                         } else {
                             msg = new NackMessage();
                         }
@@ -232,30 +256,25 @@ public class Server implements Main.Application {
                         SocketIO.write(channel, this.messageEncoder.encode(msg.toFormattedString()));
                     }
                     case ENQUEUE_USER -> {
-                        var registerMessage = (EnqueueUserMessage) message;
+                        var enqueueMessage = (EnqueueUserMessage) message;
 
-                        var parts = registerMessage.payload().split(Message.payloadDataSeparator());
+                        var user = this.userRepository.findById(enqueueMessage.getUserId());
 
-                        long userId = Long.parseLong(parts[0]);
-
-                        var user = this.userRepository.findById(userId);
-
-                        if (this.userQueue.addPlayer(new QueueUser(user, channel, new Date(), null)))
+                        if (this.userQueue.addPlayer(new QueueUser(user, channel, Instant.now(), null)))
                             // add the user to a queue along with its channel
                             System.out.printf("Enqueueing user with id %d%n", user.id());
 
                     }
                     case USER_DISCONNECTED -> {
+                        var user = this.connectedUsers.remove(channel);
 
-//                        var user = (User) channel.keyFor(this.channelSelector).attachment();
-//
-//                        if (user != null) {
-//                            var queuedUser = this.userQueue.getForId(user.id());
-//
-//                            var newQueuedUser = new QueueUser(queuedUser.user(), queuedUser.channel(), queuedUser.instantJoined(), new Date());
-//
-//                            this.userQueue.addPlayer(newQueuedUser);
-//                        }
+                        if (user != null) {
+                            var queuedUser = this.userQueue.getForId(user.id());
+
+                            var newQueuedUser = new QueueUser(queuedUser.user(), queuedUser.channel(), queuedUser.instantJoined(), Instant.now());
+
+                            this.userQueue.addPlayer(newQueuedUser);
+                        }
                     }
                     default -> {
                     }

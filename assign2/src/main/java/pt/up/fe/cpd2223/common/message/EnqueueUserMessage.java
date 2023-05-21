@@ -4,6 +4,10 @@ public class EnqueueUserMessage extends Message {
 
     private final long userId;
 
+    public long getUserId() {
+        return this.userId;
+    }
+
     public EnqueueUserMessage(long userId) {
         this.userId = userId;
     }

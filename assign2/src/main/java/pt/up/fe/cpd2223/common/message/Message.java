@@ -63,6 +63,30 @@ public abstract class Message {
                 yield new GameJoinedMessage();
             }
             case USER_DISCONNECTED -> new UserDisconnectMessage();
+            case PLAYER_TO_MOVE -> {
+                int playerId = Integer.parseInt(parts[1]);
+
+                yield new PlayerToMoveMessage(playerId);
+            }
+            case MOVE -> {
+                var payload = parts[1];
+
+                var info = payload.split(Message.payloadDataSeparator());
+
+                long userId = Long.parseLong(info[0]);
+                int x = Integer.parseInt(info[1]), y = Integer.parseInt(info[2]);
+
+                yield new MoveMessage(x, y, userId);
+            }
+            // case GAME_OVER -> {
+            //     var payload = parts[1];
+//
+            //     var info = payload.split(Message.payloadDataSeparator());
+//
+            //     int winnerId = Integer.parseInt(info[0]), loserId = Integer.parseInt(info[1]);
+//
+            //     yield new GameOverMessage(winnerId, loserId);
+            // }
             default -> new UnknownMessage();
         };
     }
@@ -75,7 +99,9 @@ public abstract class Message {
         return "\n";
     }
 
-    public static String metadataSeparator() { return ":"; }
+    public static String metadataSeparator() {
+        return ":";
+    }
 
     public Message withChannel(SocketChannel channel) {
         this.socket = channel;

@@ -1,7 +1,9 @@
 package pt.up.fe.cpd2223.game;
 
+import pt.up.fe.cpd2223.common.message.MoveMessage;
+
 public class TicTacToe {
-    private char[][] board;
+    private final char[][] board;
     private char currentMark;
 
     public TicTacToe() {
@@ -97,5 +99,8 @@ public class TicTacToe {
 
     public char getCurrentMark() {
         return currentMark;
+    }
+
+    public void handle(MoveMessage moveMessage) {
     }
 }

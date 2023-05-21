@@ -1,5 +1,7 @@
 package pt.up.fe.cpd2223.server.userQueue;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.OptionalInt;
@@ -17,7 +19,7 @@ public class NormalUserQueue extends AbstractUserQueue {
     @Override
     public boolean addPlayer(QueueUser player) {
         try {
-            this.lock.lock();
+            this.lock.lock(); // the lock is needed since we are inserting users into the queue
 
             boolean userAppended = false;
 
@@ -50,6 +52,11 @@ public class NormalUserQueue extends AbstractUserQueue {
 
             while (this.users.size() < this.gameGroupSize) {
                 this.condition.await();
+            }
+
+            // remove users that have been disconnected for more than 15 seconds
+            if (this.users.removeIf((queueUser -> !queueUser.channel().isConnected() && Duration.between(queueUser.instantDisconnected(), Instant.now()).toSeconds() > 15))) {
+                System.out.println("Removed users that have been disconnected for more than 15 seconds");
             }
 
             var selectedUsers = this.users.stream().filter((queueUser -> queueUser.channel().isConnected())).limit(this.gameGroupSize).toList();

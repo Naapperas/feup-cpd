@@ -19,6 +19,7 @@ public class MessageHandler {
         if (bytesRead <= 0) {
 
             if (bytesRead == -1) {
+                // user has disconnected, signal it
                 messageQueue.enqueueMessage(new UserDisconnectMessage().withChannel(channel));
             }
 
@@ -40,11 +41,12 @@ public class MessageHandler {
         }
     }
 
-    public static void writeMessage(SocketChannel channel, Message message, Encoder encoder) {
+    public static void writeMessage(SocketChannel channel, Message message, Encoder encoder) throws IOException {
         try {
             SocketIO.write(channel, encoder.encode(message.toFormattedString()));
         } catch (Exception e) {
             System.err.println("Error writing message to channel");
+            throw e;
         }
     }
 }

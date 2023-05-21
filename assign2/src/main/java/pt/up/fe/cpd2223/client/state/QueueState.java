@@ -21,7 +21,7 @@ public class QueueState extends State {
 
         if (message instanceof GameJoinedMessage gameJoinedMessage) {
             System.out.println("Joined game");
-            return new GameState(this.encoder, this.decoder);
+            return new GameState(this.encoder, this.decoder, userId);
         } else {
             return this;
         }
