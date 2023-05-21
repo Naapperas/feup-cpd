@@ -20,6 +20,8 @@ public class Main {
 
         var executableArgs = Arrays.copyOfRange(args, 1, args.length);
 
+        System.out.println("Running " + type + " with args: " + Arrays.toString(executableArgs));
+
         Application app = switch (type.toLowerCase()) {
             case "server" -> Server.configure(executableArgs);
             case "client" -> Client.create(executableArgs);

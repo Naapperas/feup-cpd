@@ -1,5 +1,5 @@
 plugins {
-    id("java")
+    application
 }
 
 group = "pt.up.fe.cpd2223"
@@ -7,6 +7,10 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+}
+
+application {
+    mainClass.set("pt.up.fe.cpd2223.Main") 
 }
 
 dependencies {
