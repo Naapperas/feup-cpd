@@ -15,9 +15,12 @@ public class Game {
 
     private final Encoder encoder;
 
+    private final TicTacToe ticTacToe;
+
     public Game(List<QueueUser> users, Encoder encoder) {
         this.users = users;
         this.encoder = encoder;
+        this.ticTacToe = new TicTacToe();
 
         try {
             this.broadcastMessage(new GameJoinedMessage());
