@@ -186,9 +186,15 @@ public class Server implements Main.Application {
                     var userChannel = user.channel();
 
                     try {
+                        // FIXME: unfortunately, due to the way we built the clients, this needs to be done: they need to be constantly fed messages
+                        MessageHandler.writeMessage(userChannel, new AckMessage(), this.messageEncoder);
+
+                        System.out.printf("Re registering user with id %d%n", user.user().id());
+
                         userChannel
                                 .configureBlocking(false)
                                 .register(this.channelSelector, SelectionKey.OP_READ); // register them back for reading
+
 
                         // let the user decide if they want to play again
                         // this.messageQueue.enqueueMessage(new EnqueueUserMessage(user.user().id()).withChannel(userChannel));
@@ -199,6 +205,8 @@ public class Server implements Main.Application {
                     // mark users as not being in a game
                     this.userToGame.remove(user.user().id());
                 });
+
+                this.channelSelector.wakeup();
             });
         }
     }
@@ -279,9 +287,11 @@ public class Server implements Main.Application {
                         if (user != null) {
                             var queuedUser = this.userQueue.getForId(user.id());
 
-                            var newQueuedUser = new QueueUser(queuedUser.user(), queuedUser.channel(), queuedUser.instantJoined(), Instant.now());
+                            if (queuedUser != null) { // in case the user did not queue in
+                                var newQueuedUser = new QueueUser(queuedUser.user(), queuedUser.channel(), queuedUser.instantJoined(), Instant.now());
 
-                            this.userQueue.addPlayer(newQueuedUser);
+                                this.userQueue.addPlayer(newQueuedUser);
+                            }
                         }
                     }
                     default -> {

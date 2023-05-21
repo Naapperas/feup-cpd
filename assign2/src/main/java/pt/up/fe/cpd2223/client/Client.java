@@ -70,6 +70,7 @@ public class Client implements Main.Application {
             var message = this.messageQueue.pollMessage(200);
 
             // make this blocking
+            // FIXME: this is not the best solution: ideally each state would poll the message queue and do things with the retrieved message (if they need a message) but I only figured this out now and its too late
             if (message == null) continue;
 
             this.state = this.state.handle(message);

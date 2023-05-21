@@ -73,7 +73,7 @@ public class Game {
 
                 if (bytesRead <= 0) {
                     System.out.printf("Player %d did not send a message, skipping turn%n", currentPlayer.user().id());
-                    continue;
+                    throw new ClosedChannelException(); // make it so error handler catches this
                 }
 
                 buffer.flip();
@@ -85,7 +85,6 @@ public class Game {
 
                 if (messages.length > 1) {
                     System.out.println("Warning: received more than one message from player");
-                    throw new ClosedChannelException(); // make it so error handler catches this
                 }
 
                 /////////////////////////////////////////////
@@ -118,6 +117,10 @@ public class Game {
                 this.gameRunning = false;
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            } finally {
+                // do this here to change players only when there is no connection error
+
+                this.game.changePlayer();
             }
         }
     }
@@ -141,7 +144,6 @@ public class Game {
             // echo the message back to every client, so they can update themselves.
             // This does however send the MoveMessage to the player that originated it but no biggie
             this.broadcastMessage(moveMessage);
-            this.game.changePlayer();
 
             if (this.game.checkForWin()) {
                 // the current player won
