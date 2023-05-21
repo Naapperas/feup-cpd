@@ -159,7 +159,6 @@ public class Server implements Main.Application {
             if (gameUsers == null) continue;
 
             System.out.println("Lobby found");
-            // TODO: instantiate Game
 
             // need to unregister with the selector in order to change the blocking mode
             gameUsers.forEach((quser) -> {
@@ -191,8 +190,8 @@ public class Server implements Main.Application {
                                 .configureBlocking(false)
                                 .register(this.channelSelector, SelectionKey.OP_READ); // register them back for reading
 
-                        System.out.println("Enqueuing user");
-                        this.messageQueue.enqueueMessage(new EnqueueUserMessage(user.user().id()));
+                        // let the user decide if they want to play again
+                        // this.messageQueue.enqueueMessage(new EnqueueUserMessage(user.user().id()).withChannel(userChannel));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

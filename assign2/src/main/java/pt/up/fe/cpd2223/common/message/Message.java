@@ -20,6 +20,7 @@ public abstract class Message {
 
                 var info = payload.split(Message.payloadDataSeparator());
 
+                // TODO: Handle malformed messages
                 String username = info[0], password = info[1];
 
                 yield new LoginMessage(username, password);
