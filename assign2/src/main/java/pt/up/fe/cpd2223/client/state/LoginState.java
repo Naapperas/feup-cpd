@@ -57,17 +57,18 @@ public class LoginState extends State {
             case ACK -> {
                 var ackMsg = (AckMessage) message;
 
+                System.out.println("Logged in");
+
                 long userId = Long.parseLong((String) ackMsg.data().get("id"));
 
-                var msg = new EnqueueUserMessage(userId);
-
+                var msg = new AuthenticatedMessage(userId);
                 try {
                     SocketIO.write(clientChannel, this.encoder.encode(msg.toFormattedString()));
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
 
-                yield new QueueState(this.encoder, this.decoder, userId);
+                yield new MenuState(this.encoder, this.decoder, userId);
             }
             default -> null;
         };

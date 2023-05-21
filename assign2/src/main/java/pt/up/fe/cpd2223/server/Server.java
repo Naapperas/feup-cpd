@@ -254,6 +254,15 @@ public class Server implements Main.Application {
 
                         SocketIO.write(channel, this.messageEncoder.encode(msg.toFormattedString()));
                     }
+                    case AUTHENTICATED -> {
+                        var authMessage = (AuthenticatedMessage) message;
+
+                        var userId = authMessage.getUserId();
+
+                        var msg = new AckMessage(Collections.singletonMap("id", userId));
+
+                        SocketIO.write(channel, this.messageEncoder.encode(msg.toFormattedString()));
+                    }
                     case ENQUEUE_USER -> {
                         var enqueueMessage = (EnqueueUserMessage) message;
 

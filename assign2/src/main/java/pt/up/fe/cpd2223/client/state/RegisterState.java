@@ -2,10 +2,7 @@ package pt.up.fe.cpd2223.client.state;
 
 import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
-import pt.up.fe.cpd2223.common.message.AckMessage;
-import pt.up.fe.cpd2223.common.message.Message;
-import pt.up.fe.cpd2223.common.message.MessageType;
-import pt.up.fe.cpd2223.common.message.RegisterMessage;
+import pt.up.fe.cpd2223.common.message.*;
 import pt.up.fe.cpd2223.common.socket.SocketIO;
 
 import java.io.IOException;
@@ -48,9 +45,18 @@ public class RegisterState extends State {
             case ACK -> {
                 var ackMsg = (AckMessage) message;
 
+                System.out.println("Logged in");
+
                 long userId = Long.parseLong((String) ackMsg.data().get("id"));
 
-                yield new QueueState(this.encoder, this.decoder, userId);
+                var msg = new AuthenticatedMessage(userId);
+                try {
+                    SocketIO.write(clientChannel, this.encoder.encode(msg.toFormattedString()));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                yield new MenuState(this.encoder, this.decoder, userId);
             }
             default -> null;
         };

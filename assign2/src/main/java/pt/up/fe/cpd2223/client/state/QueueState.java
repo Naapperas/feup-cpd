@@ -14,6 +14,10 @@ public class QueueState extends State {
         this.userId = userId;
     }
 
+    private void promptForGame() {
+
+    }
+
     @Override
     public State handle(Message message) {
 

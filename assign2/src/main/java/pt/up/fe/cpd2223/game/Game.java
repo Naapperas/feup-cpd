@@ -85,6 +85,7 @@ public class Game {
 
                 if (messages.length > 1) {
                     System.out.println("Warning: received more than one message from player");
+                    throw new ClosedChannelException(); // make it so error handler catches this
                 }
 
                 /////////////////////////////////////////////
@@ -93,25 +94,63 @@ public class Game {
                     Message msg = Message.fromFormattedString(message);
 
                     if (msg instanceof MoveMessage moveMessage) {
-                        System.out.printf("Received move message: x=%d, y=%d%n", moveMessage.getX(), moveMessage.getY());
-
                         // handle game logic
-                        this.game.handle(moveMessage);
-
-                        // echo the message back to every client, so they can update themselves.
-                        // This does however send the MoveMessage to the player that originated it but no biggie
-                        this.broadcastMessage(moveMessage);
+                        this.handle(moveMessage, currentPlayer);
                     }
                 }
 
-                this.gameRunning = this.game.isBoardFull();
+                this.gameRunning = !this.game.isBoardFull() && !this.game.checkForWin();
             } catch (ClosedChannelException e) {
 
-                // player that was supposed to move disconnected, signal it
+                // TODO: player that was supposed to move disconnected, signal it
 
+                System.out.println(currentPlayer.user().id() + " left");
 
+                currentPlayerIndex = this.cyclePlayer();
+                currentPlayer = this.getUsers().get(currentPlayerIndex);
+
+                try {
+                    MessageHandler.writeMessage(currentPlayer.channel(), new NackMessage(), this.encoder);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+
+                this.gameRunning = false;
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private void handle(MoveMessage moveMessage, QueueUser currentPlayer) throws IOException {
+
+        var userChannel = moveMessage.getClientSocket();
+
+        int x = moveMessage.getX(), y = moveMessage.getY();
+
+        System.out.printf("Received move message: x=%d, y=%d%n", x, y);
+
+        boolean piecePlaced = this.game.placeMark(y, x);
+
+        if (!piecePlaced) {
+            // this move was invalid, signal it
+
+            MessageHandler.writeMessage(userChannel, new NackMessage(), this.encoder);
+        } else {
+
+            // echo the message back to every client, so they can update themselves.
+            // This does however send the MoveMessage to the player that originated it but no biggie
+            this.broadcastMessage(moveMessage);
+            this.game.changePlayer();
+
+            if (this.game.checkForWin()) {
+                // the current player won
+
+                this.broadcastMessage(new GameWonMessage(currentPlayer.user().id()));
+            } else if (this.game.isBoardFull()) {
+                // draw
+
+                this.broadcastMessage(new GameDrawMessage());
             }
         }
     }

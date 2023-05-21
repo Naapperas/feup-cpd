@@ -35,7 +35,6 @@ public abstract class Message {
                 yield new RegisterMessage(username, password);
             }
             case ACK -> {
-
                 var additionalData = parts[1];
 
                 if (additionalData.equals("null")) yield new AckMessage();
@@ -54,7 +53,6 @@ public abstract class Message {
             }
             case NACK -> new NackMessage();
             case ENQUEUE_USER -> {
-
                 long userId = Long.parseLong(parts[1]);
 
                 yield new EnqueueUserMessage(userId);
@@ -79,15 +77,21 @@ public abstract class Message {
 
                 yield new MoveMessage(x, y, userId);
             }
-            // case GAME_OVER -> {
-            //     var payload = parts[1];
-//
-            //     var info = payload.split(Message.payloadDataSeparator());
-//
-            //     int winnerId = Integer.parseInt(info[0]), loserId = Integer.parseInt(info[1]);
-//
-            //     yield new GameOverMessage(winnerId, loserId);
-            // }
+            case AUTHENTICATED -> {
+                long userId = Long.parseLong(parts[1]);
+
+                yield new AuthenticatedMessage(userId);
+            }
+            case GAME_WON -> {
+                var payload = parts[1];
+
+                var info = payload.split(Message.payloadDataSeparator());
+
+                int winnerId = Integer.parseInt(info[0]);
+
+                yield new GameWonMessage(winnerId);
+            }
+            case GAME_DRAW -> new GameDrawMessage();
             default -> new UnknownMessage();
         };
     }

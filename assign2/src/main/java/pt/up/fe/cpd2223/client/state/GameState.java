@@ -2,10 +2,9 @@ package pt.up.fe.cpd2223.client.state;
 
 import pt.up.fe.cpd2223.common.decoding.Decoder;
 import pt.up.fe.cpd2223.common.encoding.Encoder;
-import pt.up.fe.cpd2223.common.message.Message;
-import pt.up.fe.cpd2223.common.message.MoveMessage;
-import pt.up.fe.cpd2223.common.message.PlayerToMoveMessage;
+import pt.up.fe.cpd2223.common.message.*;
 import pt.up.fe.cpd2223.common.socket.SocketIO;
+import pt.up.fe.cpd2223.game.TicTacToe;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -13,10 +12,12 @@ import java.util.Scanner;
 public class GameState extends State {
 
     private final long userId;
+    private final TicTacToe game;
 
     public GameState(Encoder encoder, Decoder decoder, long userId) {
         super(encoder, decoder);
         this.userId = userId;
+        this.game = new TicTacToe();
     }
 
     public String promptPlayerMove() {
@@ -32,8 +33,18 @@ public class GameState extends State {
 
         var clientChannel = message.getClientSocket();
 
-        if (message instanceof PlayerToMoveMessage ptmMessage) {
-            if (ptmMessage.getPlayerId() == this.userId) {
+        if (message instanceof PlayerToMoveMessage || message instanceof NackMessage) {
+
+            this.game.printBoard();
+
+            if (message instanceof NackMessage) {
+                System.out.println("That position is invalid, try another one");
+            }
+
+            // This only works because NACK is an unicast, instead of the usual broadcast that we receive
+            long playerId = message instanceof NackMessage ? this.userId : ((PlayerToMoveMessage) message).getPlayerId();
+
+            if (playerId == this.userId) {
 
                 boolean validMove = false;
 
@@ -58,14 +69,42 @@ public class GameState extends State {
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-
             }
         } else if (message instanceof MoveMessage moveMessage) {
 
+            int x = moveMessage.getX(), y = moveMessage.getY();
 
+            boolean markPlaced = this.game.placeMark(y, x);
+
+            if (!markPlaced) {
+                System.err.println("Wtf?");
+            }
+
+            // this.game.printBoard();
+            this.game.changePlayer();
+        } else if (message instanceof GameDrawMessage) {
+            this.game.printBoard();
+            System.out.println("The game ended in a draw :(");
+
+            return new MenuState(this.encoder, this.decoder, this.userId);
+        } else if (message instanceof GameWonMessage gwMessage) {
+
+            this.game.printBoard();
+
+            if (gwMessage.getWinnerId() == this.userId) {
+                // we won
+
+                System.out.println("Congratulations, you won!");
+            } else {
+                // we lost
+
+                System.out.println("Too bad, you lose. Better luck next time.");
+            }
+
+            return new MenuState(this.encoder, this.decoder, this.userId);
         }
 
         // default to continuing the game on our part
-        return new GameState(this.encoder, this.decoder, this.userId);
+        return this;
     }
 }

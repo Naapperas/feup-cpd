@@ -20,7 +20,14 @@ public class TicTacToe {
         }
     }
 
+    private void clearConsole() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
+
     public void printBoard() {
+        this.clearConsole();
+
         System.out.println("-------------");
         for (int i = 0; i < 3; i++) {
             System.out.print("| ");
@@ -74,6 +81,7 @@ public class TicTacToe {
     }
 
     private boolean checkRowCol(char c1, char c2, char c3) {
+
         return ((c1 != '-') && (c1 == c2) && (c2 == c3));
     }
 
@@ -101,6 +109,4 @@ public class TicTacToe {
         return currentMark;
     }
 
-    public void handle(MoveMessage moveMessage) {
-    }
 }
